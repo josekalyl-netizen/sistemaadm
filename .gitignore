@@ -1,0 +1,14 @@
+# banco de dados gerado pela importação (recriável: npm run importar)
+dados/sistema.db
+dados/sistema.db-shm
+dados/sistema.db-wal
+
+# Dados de clientes — NÃO versionar (CNPJ, nomes, valores).
+# As planilhas originais e o JSON gerado a partir delas ficam só na máquina.
+# Para recriar: python3 scripts/planilha_para_json.py SUAS_PLANILHAS.xlsx
+*.xlsx
+*.xls
+dados/planilhas.json
+
+node_modules/
+.DS_Store

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F2A52"/>
+      <stop offset="100%" stop-color="#04132E"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="64" height="64" rx="13" fill="url(#bg)"/>
+  <!-- bússola Atlas: anel + rosa de 4 pontas + agulha N/S -->
+  <circle cx="32" cy="32" r="22" fill="none" stroke="#4FD7F5" stroke-width="1.4" opacity="0.55"/>
+  <circle cx="32" cy="32" r="18" fill="none" stroke="#D4AF6A" stroke-width="1.6" opacity="0.9"/>
+  <!-- pontas intercardeais (escuras) -->
+  <g fill="#8A7038" opacity="0.7">
+    <polygon points="32,32 44,20 36,30"/>
+    <polygon points="32,32 44,44 36,34"/>
+    <polygon points="32,32 20,44 28,34"/>
+    <polygon points="32,32 20,20 28,30"/>
+  </g>
+  <!-- agulha N (clara) / S (apagada) -->
+  <polygon points="32,11 36,33 28,33" fill="#F2D697"/>
+  <polygon points="32,53 35,33 29,33" fill="#D4AF6A" opacity="0.6"/>
+  <!-- pontas L/O -->
+  <polygon points="53,32 33,35 33,29" fill="#F2D697" opacity="0.85"/>
+  <polygon points="11,32 31,35 31,29" fill="#F2D697" opacity="0.85"/>
+  <circle cx="32" cy="32" r="2.6" fill="#F2D697"/>
+</svg>

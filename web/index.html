@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Operação · Propostas — Atlas W3G</title>
+<meta name="theme-color" content="#0F2A52">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/atlas.css">
+<link rel="stylesheet" href="/css/sistema.css">
+<script>
+  // aplica o tema antes da primeira pintura (evita o flash de tela clara)
+  try {
+    if (localStorage.getItem("atlas_tema") === "claro") {
+      document.documentElement.setAttribute("data-tema", "claro");
+    }
+  } catch (e) {}
+</script>
+</head>
+<body>
+
+<div class="fundo-radar" aria-hidden="true"></div>
+
+<header class="cabecalho">
+  <div class="marca">
+    <svg width="30" height="30" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <circle cx="24" cy="24" r="21" stroke="currentColor" stroke-width="2" opacity="0.9"/>
+      <circle cx="24" cy="4.5" r="1.6" fill="currentColor"/>
+      <circle cx="24" cy="43.5" r="1" fill="currentColor" opacity="0.6"/>
+      <circle cx="4.5" cy="24" r="1" fill="currentColor" opacity="0.6"/>
+      <circle cx="43.5" cy="24" r="1" fill="currentColor" opacity="0.6"/>
+      <g class="bussola-agulha">
+        <path d="M24 9 L28.5 24 L24 24 Z" fill="currentColor"/>
+        <path d="M24 9 L19.5 24 L24 24 Z" fill="currentColor" opacity="0.6"/>
+        <path d="M24 39 L28.5 24 L24 24 Z" fill="currentColor" opacity="0.35"/>
+        <path d="M24 39 L19.5 24 L24 24 Z" fill="currentColor" opacity="0.2"/>
+        <circle cx="24" cy="24" r="2.6" fill="currentColor"/>
+      </g>
+    </svg>
+    <div>
+      <div class="marca-nome">Atlas</div>
+      <div class="marca-sub">Operação · Propostas</div>
+    </div>
+  </div>
+
+  <!-- BUSCA GLOBAL: acha a proposta em qualquer etapa -->
+  <div class="busca-caixa">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+    </svg>
+    <input id="busca" class="campo busca-campo" type="search" autocomplete="off"
+           placeholder="Buscar empresa, CNPJ, titular, proposta, corretor, operadora…"
+           aria-label="Busca global">
+    <button id="busca-limpar" class="busca-limpar oculto" title="Limpar busca" aria-label="Limpar busca">✕</button>
+  </div>
+
+  <div class="cabecalho-acoes">
+    <select id="supervisor-visao" class="campo" style="width:auto;min-width:170px" aria-label="Visão por supervisor">
+      <option value="">Todos os supervisores</option>
+    </select>
+    <button id="btn-nova" class="btn btn-ouro">+ Nova proposta</button>
+    <button id="btn-tema" class="btn btn-fantasma" title="Alternar tema claro/escuro" aria-label="Alternar tema">◐</button>
+  </div>
+</header>
+
+<main class="app">
+
+  <!-- DASHBOARD -->
+  <section class="painel" id="painel" aria-label="Resumo da operação"></section>
+
+  <!-- ÁREAS POR ETAPA: clicar filtra a lista -->
+  <section class="etapas" id="etapas" aria-label="Etapas do processo"></section>
+
+  <!-- FILTROS -->
+  <section class="card filtros">
+    <div class="filtros-cabeca" id="filtros-cabeca" role="button" tabindex="0" aria-expanded="false">
+      <span class="etiqueta-editorial">Filtros</span>
+      <span class="muted" id="filtros-resumo" style="font-size:11.5px"></span>
+      <span class="muted" id="filtros-seta">▾</span>
+    </div>
+
+    <div id="filtros-painel" class="oculto">
+      <div class="filtros-grade">
+        <div>
+          <label class="rotulo" for="f-supervisor">Supervisor</label>
+          <select id="f-supervisor" class="campo"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label class="rotulo" for="f-operadora">Operadora</label>
+          <select id="f-operadora" class="campo"><option value="">Todas</option></select>
+        </div>
+        <div>
+          <label class="rotulo" for="f-corretor">Corretor</label>
+          <select id="f-corretor" class="campo"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label class="rotulo" for="f-responsavel">Responsável</label>
+          <select id="f-responsavel" class="campo"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label class="rotulo" for="f-tipo">Tipo de proposta</label>
+          <select id="f-tipo" class="campo"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label class="rotulo" for="f-empresa">Empresa</label>
+          <input id="f-empresa" class="campo" type="text" placeholder="Razão social / fantasia">
+        </div>
+        <div>
+          <label class="rotulo" for="f-documento">CNPJ / CPF</label>
+          <input id="f-documento" class="campo" type="text" inputmode="numeric" placeholder="Só os números">
+        </div>
+        <div>
+          <label class="rotulo" for="f-titular">Titular</label>
+          <input id="f-titular" class="campo" type="text" placeholder="Nome do titular">
+        </div>
+        <div>
+          <label class="rotulo" for="f-de">Período — de</label>
+          <input id="f-de" class="campo" type="date">
+        </div>
+        <div>
+          <label class="rotulo" for="f-ate">Período — até</label>
+          <input id="f-ate" class="campo" type="date">
+        </div>
+        <div>
+          <label class="rotulo" for="f-impl-de">Implantação — de</label>
+          <input id="f-impl-de" class="campo" type="date">
+        </div>
+        <div>
+          <label class="rotulo" for="f-impl-ate">Implantação — até</label>
+          <input id="f-impl-ate" class="campo" type="date">
+        </div>
+        <div>
+          <label class="rotulo" for="f-vidas-min">Vidas — mín.</label>
+          <input id="f-vidas-min" class="campo" type="number" min="0" placeholder="0">
+        </div>
+        <div>
+          <label class="rotulo" for="f-vidas-max">Vidas — máx.</label>
+          <input id="f-vidas-max" class="campo" type="number" min="0" placeholder="—">
+        </div>
+      </div>
+
+      <div class="filtros-rodape">
+        <div id="filtros-ativos" style="display:flex;gap:7px;flex-wrap:wrap;flex:1"></div>
+        <button id="btn-limpar-filtros" class="btn btn-fantasma btn-mini">Limpar tudo</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- LISTA -->
+  <div class="lista-cabeca">
+    <h2 class="section-title" id="lista-titulo">Todas as propostas</h2>
+    <span class="lista-contagem" id="lista-contagem"></span>
+    <div class="ordenar">
+      <label class="rotulo" for="ordem" style="margin:0">Ordenar</label>
+      <select id="ordem" class="campo" style="width:auto">
+        <option value="recentes">Atualizadas recentemente</option>
+        <option value="etapa">Etapa do processo</option>
+        <option value="data">Data da proposta</option>
+        <option value="valor">Valor</option>
+        <option value="empresa">Empresa (A–Z)</option>
+      </select>
+    </div>
+  </div>
+
+  <section class="cards" id="cards" aria-live="polite"></section>
+  <div class="paginacao" id="paginacao"></div>
+</main>
+
+<!-- FICHA DA PROPOSTA -->
+<div class="veu" id="veu"></div>
+<aside class="ficha" id="ficha" aria-hidden="true" aria-label="Ficha da proposta">
+  <div class="ficha-cabeca" id="ficha-cabeca"></div>
+  <div class="ficha-corpo" id="ficha-corpo"></div>
+</aside>
+
+<!-- MODAL DE CADASTRO -->
+<div class="modal oculto" id="modal"></div>
+
+<div class="aviso" id="aviso" role="status"></div>
+
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>
