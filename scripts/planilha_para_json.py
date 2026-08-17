@@ -63,10 +63,21 @@ def chave(texto):
 
 
 def supervisor_do_arquivo(caminho):
+    """
+    Tira o nome do supervisor do nome do arquivo. Aceita as variações que
+    aparecem na prática:
+
+        LARISSA_2026.xlsx            -> LARISSA
+        LUCAS ABC 2026.xlsx          -> LUCAS ABC
+        Cópia de LUCAS SP 2026.xlsx  -> LUCAS SP
+        KATHY 2026 (1).xlsx          -> KATHY
+    """
     nome = os.path.basename(caminho)
     nome = re.sub(r"\.xlsx$", "", nome, flags=re.I)
-    nome = re.sub(r"^[0-9a-f]{6,}-", "", nome)   # prefixo de upload
-    nome = re.sub(r"[_-]?20\d\d$", "", nome)     # sufixo de ano
+    nome = re.sub(r"^[0-9a-f]{6,}-", "", nome)              # prefixo de upload
+    nome = re.sub(r"\s*\(\d+\)\s*$", "", nome)              # "(1)" de cópia do Windows
+    nome = re.sub(r"^c[oó]pia\s+(de\s+)?", "", nome, flags=re.I)
+    nome = re.sub(r"[\s_-]*20\d\d\s*$", "", nome)           # ano, com espaço ou _
     return nome.replace("_", " ").strip().upper() or "SEM SUPERVISOR"
 
 
