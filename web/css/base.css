@@ -1,0 +1,178 @@
+/* ============================================================
+   Sistema Administrativo Inteligente — Grupo W3G
+   Base visual: sóbria, clara, sem ornamento. Azul institucional
+   para ações e texto de destaque; o resto é cinza e branco, para
+   a cor das etapas ser a única cor forte da tela.
+   ============================================================ */
+
+:root {
+  /* — tema CLARO (padrão) — */
+  --c-canvas: 245 247 250;   /* fundo da página */
+  --c-paper: 255 255 255;    /* painéis e cards */
+  --c-ink: 24 34 51;         /* texto principal */
+  --c-ink2: 71 85 105;       /* texto secundário */
+  --c-muted: 122 137 158;    /* texto apagado */
+  --c-line: 224 230 238;     /* bordas */
+  --c-line2: 238 242 247;    /* bordas sutis */
+  --c-marca: 15 42 82;       /* azul W3G */
+  --c-acao: 29 78 137;       /* azul de ação (botões, links) */
+  --c-alerta: 190 55 45;
+
+  --sombra: 0 1px 2px rgba(20, 35, 60, .05);
+  --sombra-alta: 0 4px 14px -6px rgba(20, 35, 60, .18);
+  --sombra-flutua: 0 18px 40px -16px rgba(20, 35, 60, .28);
+
+  /* força do tingimento por etapa (fraco de propósito) */
+  --tinta: .13;
+  --tinta-forte: .20;
+}
+
+:root[data-tema="escuro"] {
+  --c-canvas: 15 20 28;
+  --c-paper: 22 29 40;
+  --c-ink: 232 238 246;
+  --c-ink2: 186 198 214;
+  --c-muted: 130 145 165;
+  --c-line: 42 53 70;
+  --c-line2: 33 43 58;
+  --c-marca: 210 224 242;
+  --c-acao: 122 170 230;
+  --c-alerta: 232 110 100;
+
+  --sombra: 0 1px 2px rgba(0, 0, 0, .3);
+  --sombra-alta: 0 6px 18px -8px rgba(0, 0, 0, .6);
+  --sombra-flutua: 0 20px 44px -16px rgba(0, 0, 0, .7);
+
+  --tinta: .14;
+  --tinta-forte: .22;
+}
+
+* { box-sizing: border-box; }
+/* a ficha fica fora da tela à direita quando fechada; sem o overflow-x nos
+   DOIS elementos, ela cria uma barra de rolagem horizontal na página */
+html, body { height: 100%; overflow-x: hidden; }
+
+body {
+  margin: 0;
+  background: rgb(var(--c-canvas));
+  color: rgb(var(--c-ink));
+  font-family: "Inter", -apple-system, "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { margin: 0; font-weight: 600; }
+
+/* --------------------------------------------------------------- títulos */
+.titulo {
+  font-size: 17px;
+  font-weight: 600;
+  color: rgb(var(--c-ink));
+}
+
+.rotulo {
+  display: block;
+  font-size: 11px;
+  color: rgb(var(--c-muted));
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.secao-titulo {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: rgb(var(--c-muted));
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+/* ------------------------------------------------------------ superfícies */
+.card {
+  background: rgb(var(--c-paper));
+  border: 1px solid rgb(var(--c-line));
+  border-radius: 6px;
+  box-shadow: var(--sombra);
+}
+
+/* ---------------------------------------------------------------- pills */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pill-neutro {
+  background: rgb(var(--c-muted) / .13);
+  color: rgb(var(--c-ink2));
+}
+
+/* ------------------------------------------------------------- controles */
+input, select, textarea, button { font-family: inherit; font-size: 13px; color: inherit; }
+
+.campo {
+  width: 100%;
+  padding: 8px 10px;
+  background: rgb(var(--c-paper));
+  border: 1px solid rgb(var(--c-line));
+  border-radius: 5px;
+  color: rgb(var(--c-ink));
+  outline: none;
+  transition: border-color .12s, box-shadow .12s;
+}
+.campo:focus {
+  border-color: rgb(var(--c-acao));
+  box-shadow: 0 0 0 3px rgb(var(--c-acao) / .13);
+}
+.campo::placeholder { color: rgb(var(--c-muted)); }
+select.campo { cursor: pointer; }
+textarea.campo { resize: vertical; min-height: 64px; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid rgb(var(--c-line));
+  border-radius: 5px;
+  background: rgb(var(--c-paper));
+  color: rgb(var(--c-ink));
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background .12s, border-color .12s;
+}
+.btn:hover { background: rgb(var(--c-muted) / .09); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.btn-principal {
+  background: rgb(var(--c-acao));
+  border-color: rgb(var(--c-acao));
+  color: #fff;
+  font-weight: 600;
+}
+.btn-principal:hover { filter: brightness(1.08); background: rgb(var(--c-acao)); }
+
+.btn-limpo { background: transparent; border-color: transparent; color: rgb(var(--c-ink2)); }
+.btn-limpo:hover { background: rgb(var(--c-muted) / .11); }
+
+.btn-mini { padding: 4px 9px; font-size: 12px; }
+
+/* ------------------------------------------------------------ utilitários */
+.muted { color: rgb(var(--c-muted)); }
+.mono { font-variant-numeric: tabular-nums; }
+.oculto { display: none !important; }
+
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--c-muted) / .35);
+  border: 3px solid transparent;
+  border-radius: 8px;
+  background-clip: content-box;
+}

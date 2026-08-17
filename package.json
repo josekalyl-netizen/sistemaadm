@@ -1,7 +1,7 @@
 {
-  "name": "sistema-operacional-propostas",
-  "version": "1.0.0",
-  "description": "Sistema operacional de propostas — Grupo W3G · Programa Atlas. Substitui a planilha de controle: cadastro, status e organização automática por etapa.",
+  "name": "sistema-administrativo-inteligente",
+  "version": "1.1.0",
+  "description": "Sistema Administrativo Inteligente — Grupo W3G. Substitui a planilha de controle das propostas: cadastro, status e organização automática por etapa.",
   "private": true,
   "type": "module",
   "engines": {

@@ -15,9 +15,8 @@ import { fileURLToPath } from "node:url";
 import { abrirBanco } from "./banco.js";
 import { prepararSePreciso } from "./preparar.js";
 import {
-  ErroDeUso, adicionarVida, conferirDocumento, config, criarProposta,
-  criarSupervisor, editarProposta, listarPropostas, mudarStatus, obterProposta,
-  painel, removerVida,
+  ErroDeUso, conferirDocumento, config, criarProposta, criarSupervisor,
+  editarProposta, listarPropostas, mudarStatus, obterProposta, painel,
 } from "./api.js";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
@@ -35,6 +34,9 @@ const TIPOS = {
   ".woff2": "font/woff2",
 };
 
+// Na primeira execução, converte e importa as planilhas sozinho. Precisa vir
+// antes de pegar o banco: se o esquema for antigo, a preparação o recria.
+await prepararSePreciso();
 const db = abrirBanco();
 
 function responder(res, status, corpo) {
@@ -100,16 +102,6 @@ async function rotaApi(req, res, url) {
     return mudarStatus(db, m[1], await lerCorpo(req));
   }
 
-  if ((m = caminho.match(/^\/propostas\/(\d+)\/vidas$/)) && metodo === "POST") {
-    const corpo = await lerCorpo(req);
-    res.statusCode = 201;
-    return adicionarVida(db, m[1], corpo, corpo.autor);
-  }
-
-  if ((m = caminho.match(/^\/propostas\/(\d+)\/vidas\/(\d+)$/)) && metodo === "DELETE") {
-    return removerVida(db, m[1], m[2]);
-  }
-
   throw new ErroDeUso("Rota não encontrada.", 404);
 }
 
@@ -157,15 +149,12 @@ const servidor = createServer(async (req, res) => {
   await servirEstatico(res, url.pathname);
 });
 
-// Na primeira execução, converte e importa as planilhas sozinho.
-await prepararSePreciso(db);
-
 servidor.listen(PORTA, () => {
   const n = db.prepare("SELECT COUNT(*) AS n FROM propostas").get().n;
   const endereco = `http://localhost:${PORTA}`;
   console.log(`\n  ┌──────────────────────────────────────────────┐`);
-  console.log(`  │  Sistema Operacional de Propostas            │`);
-  console.log(`  │  Programa Atlas · Grupo W3G                  │`);
+  console.log(`  │  Sistema Administrativo Inteligente          │`);
+  console.log(`  │  Grupo W3G                                   │`);
   console.log(`  └──────────────────────────────────────────────┘`);
   console.log(`\n  Abra no navegador:  ${endereco}`);
   console.log(`  ${n} propostas no sistema`);

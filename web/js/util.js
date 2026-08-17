@@ -96,8 +96,6 @@ export const api = {
   criar: (corpo) => pedir("/api/propostas", { method: "POST", corpo }),
   editar: (id, corpo) => pedir(`/api/propostas/${id}`, { method: "PATCH", corpo }),
   status: (id, corpo) => pedir(`/api/propostas/${id}/status`, { method: "PATCH", corpo }),
-  addVida: (id, corpo) => pedir(`/api/propostas/${id}/vidas`, { method: "POST", corpo }),
-  delVida: (id, vidaId) => pedir(`/api/propostas/${id}/vidas/${vidaId}`, { method: "DELETE" }),
   novoSupervisor: (nome) => pedir("/api/supervisores", { method: "POST", corpo: { nome } }),
   conferirDocumento: (doc) => pedir(`/api/conferir-documento?documento=${encodeURIComponent(doc)}`),
 };

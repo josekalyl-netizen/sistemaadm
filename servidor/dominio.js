@@ -1,29 +1,33 @@
 /**
- * Domínio da operação: as etapas, o mapeamento vindo da planilha e as regras
- * derivadas (faixa etária, normalização de documento, busca).
+ * Domínio da operação: as etapas e as regras derivadas.
  *
  * Regra central do sistema: uma proposta tem UM status_atual. É ele — e só ele
  * — que decide em que etapa a proposta aparece. Não existe cópia de registro
  * entre etapas; a interface filtra pelo status.
+ *
+ * Os campos são exatamente os da planilha da operação:
+ *   estipulante · CNPJ/CPF · proposta · operadora · situação · validade ·
+ *   corretor · valor · responsável · emissão · cadastrado · observações
+ * mais o supervisor (que vem do arquivo) e a pendência (quando é o caso).
  */
 
 /**
- * As 8 etapas do processo, na sequência operacional. A ordem é a do fluxo.
+ * As 8 etapas do processo, na sequência operacional.
  *
  * Cada etapa tem UMA cor, e é ela que tinge o card na lista. Os tons são
- * fracos de propósito (pastel): a tela mostra centenas de cards e cor forte
- * cansa a vista. `cor` é o traço/rótulo; o fundo do card usa a mesma cor com
- * pouca opacidade — ver `--etapa-cor` em web/css/sistema.css.
+ * fracos de propósito: a tela mostra centenas de cards e cor forte cansa a
+ * vista. `cor` é o traço e o rótulo; o fundo usa a mesma cor com pouca
+ * opacidade — ver `--etapa-cor` em web/css/sistema.css.
  */
 export const ETAPAS = [
-  { codigo: "nova",           nome: "Nova",             ordem: 1, grupo: "aberta",    cor: "#9AA7BC", descricao: "Propostas recém cadastradas." },
-  { codigo: "em_analise",     nome: "Em análise",       ordem: 2, grupo: "aberta",    cor: "#E8877D", descricao: "Propostas sendo trabalhadas pelo operacional." },
-  { codigo: "cotacao",        nome: "Cotação",          ordem: 3, grupo: "aberta",    cor: "#7FC6D9", descricao: "Propostas em processo de cotação." },
-  { codigo: "enviada",        nome: "Proposta enviada", ordem: 4, grupo: "aberta",    cor: "#A79BD4", descricao: "Propostas já enviadas ao cliente." },
-  { codigo: "pendente",       nome: "Pendente",         ordem: 5, grupo: "atencao",   cor: "#E3C46A", descricao: "Propostas que possuem alguma pendência." },
-  { codigo: "em_implantacao", nome: "Em implantação",   ordem: 6, grupo: "andamento", cor: "#D8A97E", descricao: "Propostas que já avançaram para implantação." },
-  { codigo: "implantada",     nome: "Implantada",       ordem: 7, grupo: "concluida", cor: "#84C5A3", descricao: "Propostas cuja implantação foi concluída." },
-  { codigo: "cancelada",      nome: "Cancelada",        ordem: 8, grupo: "encerrada", cor: "#C96F6F", descricao: "Processos encerrados sem implantação." },
+  { codigo: "nova",           nome: "Nova",             ordem: 1, cor: "#9AA7BC", descricao: "Propostas recém cadastradas." },
+  { codigo: "em_analise",     nome: "Em análise",       ordem: 2, cor: "#E8877D", descricao: "Propostas sendo trabalhadas pelo operacional." },
+  { codigo: "cotacao",        nome: "Cotação",          ordem: 3, cor: "#7FC6D9", descricao: "Propostas em processo de cotação." },
+  { codigo: "enviada",        nome: "Proposta enviada", ordem: 4, cor: "#A79BD4", descricao: "Propostas já enviadas ao cliente." },
+  { codigo: "pendente",       nome: "Pendente",         ordem: 5, cor: "#E3C46A", descricao: "Propostas que possuem alguma pendência." },
+  { codigo: "em_implantacao", nome: "Em implantação",   ordem: 6, cor: "#D8A97E", descricao: "Propostas que já avançaram para implantação." },
+  { codigo: "implantada",     nome: "Implantada",       ordem: 7, cor: "#84C5A3", descricao: "Propostas cuja implantação foi concluída." },
+  { codigo: "cancelada",      nome: "Cancelada",        ordem: 8, cor: "#C96F6F", descricao: "Processos encerrados sem implantação." },
 ];
 
 export const CODIGOS_ETAPA = ETAPAS.map((e) => e.codigo);
@@ -71,47 +75,6 @@ export const TIPOS_PENDENCIA = [
   "Pendência da operadora",
 ];
 
-/** Faixas etárias usadas pela operação (as mesmas da tabela de preço). */
-export const FAIXAS_ETARIAS = [
-  { codigo: "00-18", rotulo: "00 a 18", min: 0,  max: 18 },
-  { codigo: "19-23", rotulo: "19 a 23", min: 19, max: 23 },
-  { codigo: "24-28", rotulo: "24 a 28", min: 24, max: 28 },
-  { codigo: "29-33", rotulo: "29 a 33", min: 29, max: 33 },
-  { codigo: "34-38", rotulo: "34 a 38", min: 34, max: 38 },
-  { codigo: "39-43", rotulo: "39 a 43", min: 39, max: 43 },
-  { codigo: "44-48", rotulo: "44 a 48", min: 44, max: 48 },
-  { codigo: "49-53", rotulo: "49 a 53", min: 49, max: 53 },
-  { codigo: "54-58", rotulo: "54 a 58", min: 54, max: 58 },
-  { codigo: "59+",   rotulo: "59 ou +", min: 59, max: 200 },
-];
-
-export function faixaEtaria(idade) {
-  const n = Number(idade);
-  if (!Number.isFinite(n) || n < 0) return null;
-  const faixa = FAIXAS_ETARIAS.find((f) => n >= f.min && n <= f.max);
-  return faixa ? faixa.codigo : null;
-}
-
-/** Tipos de proposta. PF/PME/adesão é a divisão que a operação já usa. */
-export const TIPOS_PROPOSTA = [
-  { codigo: "pf",       nome: "Pessoa Física" },
-  { codigo: "pme",      nome: "PME / Empresarial" },
-  { codigo: "adesao",   nome: "Coletivo por adesão" },
-  { codigo: "odonto",   nome: "Odontológico" },
-  { codigo: "outro",    nome: "Outro" },
-];
-
-/** Deduz o tipo pelo documento e pelo nome da operadora (planilha não tem campo). */
-export function deduzirTipo(documento, operadora = "") {
-  const op = texto(operadora).toUpperCase();
-  if (op.includes("ODONTO") || op.includes("DENTAL")) return "odonto";
-  if (op.includes("QUALICORP") || op.includes("ADESAO")) return "adesao";
-  const digitos = somenteDigitos(documento);
-  if (digitos.length === 14) return "pme";
-  if (digitos.length === 11) return "pf";
-  return "outro";
-}
-
 // ---------------------------------------------------------------- utilidades
 
 export function texto(valor) {
@@ -145,15 +108,21 @@ export function formatarDocumento(valor) {
 export function validarDocumento(valor) {
   const d = somenteDigitos(valor);
   if (!d) return { valido: false, tipo: null, motivo: "documento vazio" };
-  if (d.length === 14) return { valido: validarCNPJ(d), tipo: "cnpj", motivo: validarCNPJ(d) ? null : "dígito verificador do CNPJ não confere" };
-  if (d.length === 11) return { valido: validarCPF(d), tipo: "cpf", motivo: validarCPF(d) ? null : "dígito verificador do CPF não confere" };
+  if (d.length === 14) {
+    const ok = validarCNPJ(d);
+    return { valido: ok, tipo: "cnpj", motivo: ok ? null : "dígito verificador do CNPJ não confere" };
+  }
+  if (d.length === 11) {
+    const ok = validarCPF(d);
+    return { valido: ok, tipo: "cpf", motivo: ok ? null : "dígito verificador do CPF não confere" };
+  }
   return { valido: false, tipo: null, motivo: `${d.length} dígitos (não é CPF nem CNPJ)` };
 }
 
 function validarCNPJ(d) {
   if (/^(\d)\1{13}$/.test(d)) return false;
-  const calc = (fatiar) => {
-    const pesos = fatiar === 12 ? [5,4,3,2,9,8,7,6,5,4,3,2] : [6,5,4,3,2,9,8,7,6,5,4,3,2];
+  const calc = (ate) => {
+    const pesos = ate === 12 ? [5,4,3,2,9,8,7,6,5,4,3,2] : [6,5,4,3,2,9,8,7,6,5,4,3,2];
     const soma = pesos.reduce((acc, p, i) => acc + p * Number(d[i]), 0);
     const resto = soma % 11;
     return resto < 2 ? 0 : 11 - resto;

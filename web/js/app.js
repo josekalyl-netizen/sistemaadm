@@ -1,16 +1,14 @@
 /**
- * Tela principal da operação.
+ * Tela principal.
  *
- * Tudo acontece aqui: dashboard, áreas por etapa, busca, filtros e a lista.
+ * Tudo acontece aqui: resumo, áreas por etapa, busca, filtros e a lista.
  * O estado da tela mora em `filtros`; qualquer mudança recarrega a lista e as
  * contagens. A proposta é sempre a mesma linha do banco — o que muda é o
  * filtro que a interface aplica.
  */
 
-import {
-  $, $$, aguardar, api, avisar, corRGB, data, desde, esc, moeda, numero,
-} from "./util.js";
-import { abrirFicha, fecharFicha, iniciarFicha } from "./ficha.js";
+import { $, $$, aguardar, api, avisar, corRGB, data, desde, esc, moeda, numero } from "./util.js";
+import { abrirFicha, iniciarFicha } from "./ficha.js";
 import { abrirCadastro, iniciarCadastro } from "./cadastro.js";
 
 let config = null;
@@ -18,9 +16,18 @@ let config = null;
 /** Estado da tela. Vira query string na API e no endereço do navegador. */
 const filtros = {
   busca: "", status: "", supervisor_id: "", operadora: "", corretor: "",
-  responsavel: "", tipo: "", empresa: "", documento: "", titular: "",
-  de: "", ate: "", implantada_de: "", implantada_ate: "",
-  vidas_min: "", vidas_max: "", ordem: "recentes", pagina: 1,
+  responsavel: "", cadastrado: "", de: "", ate: "", ordem: "recentes", pagina: 1,
+};
+
+/** Filtros que aparecem no painel (o status tem as abas; a busca tem o campo). */
+const CAMPOS_FILTRO = {
+  supervisor_id: { sel: "#f-supervisor", rotulo: "Supervisor" },
+  operadora:     { sel: "#f-operadora", rotulo: "Operadora" },
+  corretor:      { sel: "#f-corretor", rotulo: "Corretor" },
+  responsavel:   { sel: "#f-responsavel", rotulo: "Responsável" },
+  cadastrado:    { sel: "#f-cadastrado", rotulo: "Cadastrado" },
+  de:            { sel: "#f-de", rotulo: "De" },
+  ate:           { sel: "#f-ate", rotulo: "Até" },
 };
 
 const etapaDe = (codigo) => config.etapas.find((e) => e.codigo === codigo) || config.etapas[0];
@@ -57,7 +64,6 @@ function preencherListas() {
   encher("#f-operadora", config.operadoras);
   encher("#f-corretor", config.corretores);
   encher("#f-responsavel", config.responsaveis);
-  encher("#f-tipo", config.tipos_proposta, (t) => t.nome, (t) => t.codigo);
 }
 
 // -------------------------------------------------------- endereço (URL)
@@ -71,24 +77,12 @@ function lerEndereco() {
   filtros.pagina = Number(filtros.pagina) || 1;
 
   $("#busca").value = filtros.busca;
-  $("#f-supervisor").value = filtros.supervisor_id;
+  $("#busca-limpar").classList.toggle("oculto", !filtros.busca);
   $("#supervisor-visao").value = filtros.supervisor_id;
-  $("#f-operadora").value = filtros.operadora;
-  $("#f-corretor").value = filtros.corretor;
-  $("#f-responsavel").value = filtros.responsavel;
-  $("#f-tipo").value = filtros.tipo;
-  $("#f-empresa").value = filtros.empresa;
-  $("#f-documento").value = filtros.documento;
-  $("#f-titular").value = filtros.titular;
-  $("#f-de").value = filtros.de;
-  $("#f-ate").value = filtros.ate;
-  $("#f-impl-de").value = filtros.implantada_de;
-  $("#f-impl-ate").value = filtros.implantada_ate;
-  $("#f-vidas-min").value = filtros.vidas_min;
-  $("#f-vidas-max").value = filtros.vidas_max;
   $("#ordem").value = filtros.ordem;
+  for (const [chave, { sel }] of Object.entries(CAMPOS_FILTRO)) $(sel).value = filtros[chave];
 
-  if (temFiltroAvancado()) abrirFiltros(true);
+  if (temFiltro()) abrirFiltros(true);
 }
 
 function escreverEndereco() {
@@ -101,6 +95,8 @@ function escreverEndereco() {
   const busca = params.toString();
   history.replaceState(null, "", busca ? `?${busca}` : location.pathname);
 }
+
+const temFiltro = () => Object.keys(CAMPOS_FILTRO).some((c) => filtros[c]);
 
 // ---------------------------------------------------------------- eventos
 
@@ -130,52 +126,38 @@ function ligarEventos() {
 
   // visão por supervisor (cabeçalho) e filtro de supervisor andam juntos
   $("#supervisor-visao").addEventListener("change", (e) => {
-    filtros.supervisor_id = e.target.value;
-    $("#f-supervisor").value = e.target.value;
-    filtros.pagina = 1;
-    recarregarTudo();
+    aplicar("supervisor_id", e.target.value);
   });
 
-  const ligarFiltro = (sel, chave, imediato = true) => {
+  for (const [chave, { sel }] of Object.entries(CAMPOS_FILTRO)) {
     const campo = $(sel);
-    const aplicar = () => {
-      filtros[chave] = campo.value;
-      if (chave === "supervisor_id") $("#supervisor-visao").value = campo.value;
-      filtros.pagina = 1;
-      recarregarTudo();
-    };
-    campo.addEventListener(imediato ? "change" : "input", imediato ? aplicar : aguardar(aplicar));
-  };
+    const evento = campo.tagName === "SELECT" || campo.type === "date" ? "change" : "input";
+    const acao = () => aplicar(chave, campo.value);
+    campo.addEventListener(evento, evento === "input" ? aguardar(acao) : acao);
+  }
 
-  ligarFiltro("#f-supervisor", "supervisor_id");
-  ligarFiltro("#f-operadora", "operadora");
-  ligarFiltro("#f-corretor", "corretor");
-  ligarFiltro("#f-responsavel", "responsavel");
-  ligarFiltro("#f-tipo", "tipo");
-  ligarFiltro("#f-empresa", "empresa", false);
-  ligarFiltro("#f-documento", "documento", false);
-  ligarFiltro("#f-titular", "titular", false);
-  ligarFiltro("#f-de", "de");
-  ligarFiltro("#f-ate", "ate");
-  ligarFiltro("#f-impl-de", "implantada_de");
-  ligarFiltro("#f-impl-ate", "implantada_ate");
-  ligarFiltro("#f-vidas-min", "vidas_min", false);
-  ligarFiltro("#f-vidas-max", "vidas_max", false);
-  ligarFiltro("#ordem", "ordem");
-
+  $("#ordem").addEventListener("change", (e) => aplicar("ordem", e.target.value));
   $("#btn-limpar-filtros").addEventListener("click", limparFiltros);
 
   const cabeca = $("#filtros-cabeca");
-  cabeca.addEventListener("click", () => abrirFiltros($("#filtros-painel").classList.contains("oculto")));
+  const alternar = () => abrirFiltros($("#filtros-painel").classList.contains("oculto"));
+  cabeca.addEventListener("click", alternar);
   cabeca.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      abrirFiltros($("#filtros-painel").classList.contains("oculto"));
-    }
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); alternar(); }
   });
 
   $("#btn-nova").addEventListener("click", abrirCadastro);
   $("#btn-tema").addEventListener("click", trocarTema);
+}
+
+function aplicar(chave, valor) {
+  filtros[chave] = valor;
+  filtros.pagina = 1;
+  if (chave === "supervisor_id") {
+    $("#f-supervisor").value = valor;
+    $("#supervisor-visao").value = valor;
+  }
+  recarregarTudo();
 }
 
 function abrirFiltros(abrir) {
@@ -185,10 +167,10 @@ function abrirFiltros(abrir) {
 }
 
 function trocarTema() {
-  const claro = document.documentElement.getAttribute("data-tema") === "claro";
-  if (claro) document.documentElement.removeAttribute("data-tema");
-  else document.documentElement.setAttribute("data-tema", "claro");
-  try { localStorage.setItem("atlas_tema", claro ? "escuro" : "claro"); } catch {}
+  const escuro = document.documentElement.getAttribute("data-tema") === "escuro";
+  if (escuro) document.documentElement.removeAttribute("data-tema");
+  else document.documentElement.setAttribute("data-tema", "escuro");
+  try { localStorage.setItem("w3g_tema", escuro ? "claro" : "escuro"); } catch {}
 }
 
 function limparFiltros() {
@@ -196,19 +178,12 @@ function limparFiltros() {
     if (!["ordem", "pagina"].includes(chave)) filtros[chave] = "";
   }
   filtros.pagina = 1;
-  $$(".filtros-grade .campo").forEach((c) => { c.value = ""; });
+  for (const { sel } of Object.values(CAMPOS_FILTRO)) $(sel).value = "";
   $("#busca").value = "";
   $("#supervisor-visao").value = "";
   $("#busca-limpar").classList.add("oculto");
   recarregarTudo();
 }
-
-const CAMPOS_AVANCADOS = [
-  "supervisor_id", "operadora", "corretor", "responsavel", "tipo", "empresa",
-  "documento", "titular", "de", "ate", "implantada_de", "implantada_ate",
-  "vidas_min", "vidas_max",
-];
-const temFiltroAvancado = () => CAMPOS_AVANCADOS.some((c) => filtros[c]);
 
 // -------------------------------------------------------------- desenhar
 
@@ -216,7 +191,7 @@ async function recarregarTudo() {
   escreverEndereco();
   try {
     const [resumo, lista] = await Promise.all([api.painel(filtros), api.listar(filtros)]);
-    desenharPainel(resumo);
+    desenharResumo(resumo);
     desenharEtapas(lista.contagem_por_etapa, lista.total_no_filtro);
     desenharLista(lista);
     desenharFiltrosAtivos();
@@ -225,25 +200,15 @@ async function recarregarTudo() {
   }
 }
 
-/** Dashboard: só os números que ajudam a operação a decidir o que fazer. */
-function desenharPainel(r) {
-  const tile = (rotulo, valor, nota = "") => `
-    <div class="card painel-tile">
-      <div class="kpi-value mono">${valor}</div>
-      <span class="kpi-label">${esc(rotulo)}</span>
-      ${nota ? `<div class="painel-nota">${esc(nota)}</div>` : ""}
-    </div>`;
+/** Uma linha só: o que as abas de etapa não mostram. */
+function desenharResumo(r) {
+  const item = (valor, rotulo) =>
+    `<div class="resumo-item"><span class="resumo-num">${valor}</span><span class="resumo-rot">${esc(rotulo)}</span></div>`;
 
-  const pendentes = r.por_etapa.pendente || 0;
-  const emImplantacao = r.por_etapa.em_implantacao || 0;
-  const implantadas = r.por_etapa.implantada || 0;
-
-  $("#painel").innerHTML = [
-    tile("Total de propostas", numero(r.total)),
-    tile("Pendentes", numero(pendentes), moeda(r.valor_pendente)),
-    tile("Em implantação", numero(emImplantacao), moeda(r.valor_em_implantacao)),
-    tile("Implantadas", numero(implantadas), moeda(r.valor_implantado)),
-    tile("Total de vidas", numero(r.total_vidas)),
+  $("#resumo").innerHTML = [
+    item(numero(r.total), "propostas"),
+    item(moeda(r.valor_implantado), "implantado"),
+    item(moeda(r.valor_pendente), "parado em pendência"),
   ].join("");
 }
 
@@ -254,7 +219,7 @@ function desenharPainel(r) {
 function desenharEtapas(contagem, total) {
   const aba = (codigo, nome, quantidade, cor, ativa) => `
     <button class="etapa-aba ${ativa ? "ativa" : ""}" data-etapa="${codigo}"
-            style="--etapa-cor:${cor}" aria-pressed="${ativa}">
+            style="--cor:${cor}" aria-pressed="${ativa}">
       <span class="etapa-aba-nome">${esc(nome)}</span>
       <span class="etapa-aba-num">${numero(quantidade)}</span>
     </button>`;
@@ -268,9 +233,7 @@ function desenharEtapas(contagem, total) {
   $$("#etapas .etapa-aba").forEach((botao) => {
     botao.addEventListener("click", () => {
       const codigo = botao.dataset.etapa;
-      filtros.status = filtros.status === codigo ? "" : codigo;
-      filtros.pagina = 1;
-      recarregarTudo();
+      aplicar("status", filtros.status === codigo ? "" : codigo);
     });
   });
 }
@@ -286,8 +249,7 @@ function desenharLista(lista) {
   if (!lista.itens.length) {
     $("#cards").innerHTML = `
       <div class="vazio" style="grid-column:1/-1">
-        <div class="section-title" style="font-size:1.2rem">Nada por aqui</div>
-        <p style="margin:8px 0 0">Nenhuma proposta atende à busca e aos filtros atuais.</p>
+        Nenhuma proposta atende à busca e aos filtros atuais.
       </div>`;
     $("#paginacao").innerHTML = "";
     return;
@@ -303,42 +265,26 @@ function desenharLista(lista) {
 
 function cartao(p) {
   const et = etapaDe(p.status_atual);
-  const vidas = Number(p.total_vidas || 0);
-
   return `
-  <button class="proposta" data-id="${p.id}" style="--etapa-cor:${corRGB(et.cor)}">
+  <button class="proposta" data-id="${p.id}" style="--cor:${corRGB(et.cor)}">
     <div class="proposta-topo">
       <div class="proposta-nome">${esc(p.razao_social)}</div>
       <span class="pill proposta-etapa">${esc(et.nome)}</span>
     </div>
 
-    <div class="proposta-linha">
-      <span class="mono">${esc(p.documento_exibido || "—")}</span>
-    </div>
-    <div class="proposta-linha">
-      <b>${esc(p.operadora || "—")}</b>
-      <span>·</span>
-      <span>proposta ${esc(p.numero_proposta || "—")}</span>
-    </div>
-    <div class="proposta-linha">
-      <span>Corretor ${esc(p.corretor || "—")}</span>
-    </div>
+    <div class="proposta-dado mono" title="CNPJ / CPF">${esc(p.documento_exibido || "—")}</div>
+    <div class="proposta-dado"><b>${esc(p.operadora || "—")}</b> · proposta ${esc(p.numero_proposta || "—")}</div>
+    <div class="proposta-dado" title="Corretor">${esc(p.corretor || "—")}</div>
 
     ${p.status_atual === "pendente" && (p.pendencia_tipo || p.pendencia_detalhe) ? `
       <div class="proposta-pendencia">
-        <b>${esc(p.pendencia_tipo || "Pendência")}</b>
-        ${p.pendencia_detalhe ? ` — ${esc(p.pendencia_detalhe)}` : ""}
+        <b>${esc(p.pendencia_tipo || "Pendência")}</b>${p.pendencia_detalhe ? ` — ${esc(p.pendencia_detalhe)}` : ""}
       </div>` : ""}
 
     <div class="proposta-rodape">
-      <span title="Supervisor">${esc(p.nome_supervisor || "sem supervisor")}</span>
-      ${p.responsavel ? `<span>· ${esc(p.responsavel)}</span>` : ""}
-      ${vidas ? `<span>· ${vidas} vida${vidas === 1 ? "" : "s"}</span>` : ""}
+      <span title="Supervisor">${esc(p.nome_supervisor || "—")}</span>
+      ${p.responsavel ? `<span title="Responsável">· ${esc(p.responsavel)}</span>` : ""}
       <span class="proposta-valor">${moeda(p.valor)}</span>
-    </div>
-    <div class="proposta-linha" style="margin-top:6px;font-size:10.5px">
-      <span>${esc(data(p.data_proposta))}</span>
-      <span>· atualizada ${esc(desde(p.atualizado_em))}</span>
     </div>
   </button>`;
 }
@@ -360,50 +306,35 @@ function irParaPagina(numeroPagina) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-/** Mostra em fichas o que está filtrando agora — e deixa remover uma a uma. */
+/** Mostra o que está filtrando agora — e deixa remover um a um. */
 function desenharFiltrosAtivos() {
-  const rotulos = {
-    supervisor_id: "Supervisor", operadora: "Operadora", corretor: "Corretor",
-    responsavel: "Responsável", tipo: "Tipo", empresa: "Empresa",
-    documento: "Documento", titular: "Titular", de: "De", ate: "Até",
-    implantada_de: "Implantada de", implantada_ate: "Implantada até",
-    vidas_min: "Vidas ≥", vidas_max: "Vidas ≤",
-  };
-
-  const ativos = CAMPOS_AVANCADOS.filter((c) => filtros[c]).map((campo) => {
-    let valor = filtros[campo];
-    if (campo === "supervisor_id") {
-      valor = config.supervisores.find((s) => String(s.id) === String(valor))?.nome || valor;
-    } else if (campo === "tipo") {
-      valor = config.tipos_proposta.find((t) => t.codigo === valor)?.nome || valor;
-    } else if (["de", "ate", "implantada_de", "implantada_ate"].includes(campo)) {
-      valor = data(valor);
-    }
-    return `<span class="filtro-ativo">${esc(rotulos[campo])}: ${esc(valor)}
-              <button data-limpar="${campo}" title="Remover filtro">✕</button></span>`;
-  });
+  const ativos = Object.entries(CAMPOS_FILTRO)
+    .filter(([chave]) => filtros[chave])
+    .map(([chave, { rotulo }]) => {
+      let valor = filtros[chave];
+      if (chave === "supervisor_id") {
+        valor = config.supervisores.find((s) => String(s.id) === String(valor))?.nome || valor;
+      } else if (["de", "ate"].includes(chave)) {
+        valor = data(valor);
+      } else if (chave === "cadastrado") {
+        valor = valor === "sim" ? "Sim" : "Não";
+      }
+      return `<span class="filtro-ativo">${esc(rotulo)}: ${esc(valor)}
+                <button data-limpar="${chave}" title="Remover filtro">✕</button></span>`;
+    });
 
   $("#filtros-ativos").innerHTML = ativos.join("");
   $("#filtros-resumo").textContent = ativos.length
-    ? `${ativos.length} filtro${ativos.length === 1 ? "" : "s"} ativo${ativos.length === 1 ? "" : "s"}`
-    : "nenhum filtro ativo";
+    ? `${ativos.length} filtro${ativos.length === 1 ? "" : "s"}`
+    : "nenhum filtro";
 
   $$("#filtros-ativos [data-limpar]").forEach((botao) => {
     botao.addEventListener("click", (e) => {
       e.stopPropagation();
-      const campo = botao.dataset.limpar;
-      filtros[campo] = "";
-      const mapa = {
-        supervisor_id: "#f-supervisor", operadora: "#f-operadora", corretor: "#f-corretor",
-        responsavel: "#f-responsavel", tipo: "#f-tipo", empresa: "#f-empresa",
-        documento: "#f-documento", titular: "#f-titular", de: "#f-de", ate: "#f-ate",
-        implantada_de: "#f-impl-de", implantada_ate: "#f-impl-ate",
-        vidas_min: "#f-vidas-min", vidas_max: "#f-vidas-max",
-      };
-      if (mapa[campo]) $(mapa[campo]).value = "";
-      if (campo === "supervisor_id") $("#supervisor-visao").value = "";
-      filtros.pagina = 1;
-      recarregarTudo();
+      const chave = botao.dataset.limpar;
+      $(CAMPOS_FILTRO[chave].sel).value = "";
+      if (chave === "supervisor_id") $("#supervisor-visao").value = "";
+      aplicar(chave, "");
     });
   });
 }

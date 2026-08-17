@@ -23,18 +23,8 @@ import { fileURLToPath } from "node:url";
 
 import { abrirBanco, registrarHistorico, supervisorPorNome } from "./banco.js";
 import {
-  chaveNatural,
-  deduzirTipo,
-  etapa,
-  etapaDaSituacao,
-  formatarDocumento,
-  lerData,
-  lerValor,
-  normalizar,
-  separarCorretor,
-  somenteDigitos,
-  texto,
-  validarDocumento,
+  chaveNatural, etapa, etapaDaSituacao, formatarDocumento, lerData, lerValor,
+  normalizar, separarCorretor, somenteDigitos, texto, validarDocumento,
 } from "./dominio.js";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
@@ -45,8 +35,7 @@ export const SUPERVISOR_SEM_DONO = "NÃO ATRIBUÍDO";
 /** Texto que alimenta a busca global de uma proposta. */
 export function textoDeBusca(p) {
   return normalizar([
-    p.razao_social, p.nome_fantasia, p.titular, p.numero_proposta,
-    p.corretor, p.operadora, p.produto, p.responsavel,
+    p.razao_social, p.numero_proposta, p.corretor, p.operadora, p.responsavel,
     p.documento, p.documento_exibido, formatarDocumento(p.documento),
   ].filter(Boolean).join(" "));
 }
@@ -54,43 +43,29 @@ export function textoDeBusca(p) {
 /** Converte uma linha crua da planilha na proposta que vai para o banco. */
 export function linhaParaProposta(linha, contexto) {
   const { corretor, valorEmbutido } = separarCorretor(linha.corretor);
-  const documento = somenteDigitos(linha.documento);
   const situacao = texto(linha.situacao);
   const { codigo: status, reconhecida } = etapaDaSituacao(situacao);
 
-  const dataProposta = lerData(linha.emissao) || dataDoMes(contexto.mes, contexto.ano);
-  const valor = lerValor(linha.valor) ?? valorEmbutido;
-
   const proposta = {
     razao_social: texto(linha.estipulante),
-    nome_fantasia: "",
-    documento,
+    documento: somenteDigitos(linha.documento),
     documento_exibido: formatarDocumento(linha.documento) || texto(linha.documento),
-    titular: "",
     numero_proposta: texto(linha.proposta),
     operadora: texto(linha.operadora).toUpperCase(),
-    produto: "",
     corretor: texto(corretor).toUpperCase(),
-    tipo: deduzirTipo(documento, linha.operadora),
-    valor,
-    vidas: null,
-    data_proposta: dataProposta,
+    valor: lerValor(linha.valor) ?? valorEmbutido,
+    data_proposta: lerData(linha.emissao) || dataDoMes(contexto.mes, contexto.ano),
     data_validade: lerData(linha.validade),
-    data_implantacao: status === "implantada" ? dataProposta : null,
+    cadastrado: texto(linha.cadastrado).toUpperCase(),
+    observacoes: texto(linha.observacoes),
     status_atual: status,
     pendencia_tipo: "",
     pendencia_detalhe: "",
-    observacoes: texto(linha.observacoes),
     situacao_origem: situacao,
     responsavel: texto(linha.responsavel).toUpperCase(),
     origem_arquivo: contexto.arquivo,
     origem_aba: contexto.aba,
   };
-
-  // Pessoa física: a razão social é o próprio titular.
-  if (proposta.tipo === "pf" || documento.length === 11) {
-    proposta.titular = proposta.razao_social;
-  }
 
   proposta.chave_natural = chaveNatural({
     proposta: proposta.numero_proposta,
@@ -125,20 +100,17 @@ function validarLinha(proposta, situacaoReconhecida) {
 }
 
 const CAMPOS = [
-  "supervisor_id", "responsavel", "razao_social", "nome_fantasia", "documento",
-  "documento_exibido", "titular", "numero_proposta", "operadora", "produto",
-  "corretor", "tipo", "valor", "vidas", "data_proposta", "data_validade",
-  "data_implantacao", "status_atual", "pendencia_tipo", "pendencia_detalhe",
-  "observacoes", "situacao_origem", "origem_arquivo", "origem_aba",
+  "supervisor_id", "responsavel", "razao_social", "documento", "documento_exibido",
+  "numero_proposta", "operadora", "corretor", "valor", "data_proposta",
+  "data_validade", "cadastrado", "observacoes", "status_atual", "pendencia_tipo",
+  "pendencia_detalhe", "situacao_origem", "origem_arquivo", "origem_aba",
   "chave_natural", "busca",
 ];
 
 export function inserirProposta(db, proposta) {
   const sql = `INSERT INTO propostas (${CAMPOS.join(", ")})
                VALUES (${CAMPOS.map(() => "?").join(", ")})`;
-  const valores = CAMPOS.map((c) => proposta[c] ?? (typeof proposta[c] === "number" ? 0 : null));
-  const r = db.prepare(sql).run(...valores.map((v) => (v === undefined ? null : v)));
-  return Number(r.lastInsertRowid);
+  return Number(db.prepare(sql).run(...CAMPOS.map((c) => proposta[c] ?? null)).lastInsertRowid);
 }
 
 /**
@@ -153,8 +125,6 @@ function abasNaOrdemDeImportacao(arquivos) {
       lista.push({
         supervisor: aba.compartilhada ? SUPERVISOR_SEM_DONO : arq.supervisor,
         arquivo: arq.arquivo,
-        compartilhada: aba.compartilhada,
-        hash: aba.hash,
         ...aba,
       });
     }
@@ -176,7 +146,7 @@ export function importar({ simular = false, recomecar = false, ano = 2026, camin
   const bruto = JSON.parse(readFileSync(caminho, "utf8"));
 
   if (recomecar && !simular) {
-    db.exec("DELETE FROM historico; DELETE FROM vidas; DELETE FROM propostas;");
+    db.exec("DELETE FROM historico; DELETE FROM propostas;");
   }
 
   const relatorio = {
@@ -315,6 +285,5 @@ function imprimirRelatorio(r, simulacao) {
 if (process.argv[1] && process.argv[1].endsWith("importar.js")) {
   const simular = process.argv.includes("--simular");
   const recomecar = process.argv.includes("--recomecar");
-  const relatorio = importar({ simular, recomecar });
-  imprimirRelatorio(relatorio, simular);
+  imprimirRelatorio(importar({ simular, recomecar }), simular);
 }

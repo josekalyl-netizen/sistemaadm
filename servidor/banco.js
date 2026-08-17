@@ -2,8 +2,9 @@
  * Banco de dados — SQLite embutido no Node (módulo `node:sqlite`, sem
  * dependência externa). O arquivo fica em dados/sistema.db.
  *
- * Modelo: UMA linha por proposta. O campo `status_atual` é a única fonte de
- * verdade sobre a etapa — não existem tabelas separadas por etapa.
+ * Modelo: UMA linha por proposta, com as mesmas colunas da planilha da
+ * operação. O campo `status_atual` é a única fonte de verdade sobre a etapa —
+ * não existem tabelas separadas por etapa.
  */
 
 import { DatabaseSync } from "node:sqlite";
@@ -14,6 +15,12 @@ import { fileURLToPath } from "node:url";
 const AQUI = dirname(fileURLToPath(import.meta.url));
 export const CAMINHO_BANCO = process.env.SISTEMA_DB
   || join(AQUI, "..", "dados", "sistema.db");
+
+/**
+ * Muda quando as colunas mudam. Se o banco na máquina for de uma versão
+ * anterior, a preparação recria a partir das planilhas em vez de quebrar.
+ */
+export const VERSAO_ESQUEMA = 2;
 
 const ESQUEMA = `
 CREATE TABLE IF NOT EXISTS supervisores (
@@ -26,39 +33,30 @@ CREATE TABLE IF NOT EXISTS supervisores (
 CREATE TABLE IF NOT EXISTS propostas (
   id                INTEGER PRIMARY KEY,
 
-  -- de quem é a proposta: supervisor dono + operador responsável
+  -- de quem é a proposta
   supervisor_id     INTEGER REFERENCES supervisores(id),
   responsavel       TEXT NOT NULL DEFAULT '',
 
-  -- empresa
-  razao_social      TEXT NOT NULL,
-  nome_fantasia     TEXT NOT NULL DEFAULT '',
-  documento         TEXT NOT NULL DEFAULT '',   -- só dígitos (CNPJ ou CPF)
-  documento_exibido TEXT NOT NULL DEFAULT '',   -- como aparece pro usuário
-  titular           TEXT NOT NULL DEFAULT '',
-
-  -- proposta
-  numero_proposta   TEXT NOT NULL DEFAULT '',
+  -- os campos da planilha
+  razao_social      TEXT NOT NULL,                -- NOME DA ESTIPULANTE
+  documento         TEXT NOT NULL DEFAULT '',     -- CNPJ/CPF, só dígitos
+  documento_exibido TEXT NOT NULL DEFAULT '',     -- como aparece pro usuário
+  numero_proposta   TEXT NOT NULL DEFAULT '',     -- PROPOSTA
   operadora         TEXT NOT NULL DEFAULT '',
-  produto           TEXT NOT NULL DEFAULT '',
   corretor          TEXT NOT NULL DEFAULT '',
-  tipo              TEXT NOT NULL DEFAULT 'outro',
   valor             REAL,
-  vidas             INTEGER,                    -- informado; se null, conta a tabela vidas
-
-  -- datas do processo
-  data_proposta     TEXT,                       -- AAAA-MM-DD (emissão)
-  data_validade     TEXT,
-  data_implantacao  TEXT,
+  data_proposta     TEXT,                         -- EMISSÃO (AAAA-MM-DD)
+  data_validade     TEXT,                         -- VALIDADE
+  cadastrado        TEXT NOT NULL DEFAULT '',     -- CADASTRADO ("SIM", "NA PASTA 17/08"…)
+  observacoes       TEXT NOT NULL DEFAULT '',
 
   -- etapa: a única fonte de verdade
   status_atual      TEXT NOT NULL DEFAULT 'nova',
   pendencia_tipo    TEXT NOT NULL DEFAULT '',
   pendencia_detalhe TEXT NOT NULL DEFAULT '',
-  observacoes       TEXT NOT NULL DEFAULT '',
 
   -- rastro da planilha de origem
-  situacao_origem   TEXT NOT NULL DEFAULT '',
+  situacao_origem   TEXT NOT NULL DEFAULT '',     -- SITUAÇÃO como estava escrita
   origem_arquivo    TEXT NOT NULL DEFAULT '',
   origem_aba        TEXT NOT NULL DEFAULT '',
   chave_natural     TEXT NOT NULL DEFAULT '',
@@ -76,17 +74,6 @@ CREATE INDEX IF NOT EXISTS ix_propostas_documento  ON propostas(documento);
 CREATE INDEX IF NOT EXISTS ix_propostas_data       ON propostas(data_proposta);
 CREATE UNIQUE INDEX IF NOT EXISTS ux_propostas_chave
   ON propostas(chave_natural) WHERE chave_natural <> '';
-
-CREATE TABLE IF NOT EXISTS vidas (
-  id           INTEGER PRIMARY KEY,
-  proposta_id  INTEGER NOT NULL REFERENCES propostas(id) ON DELETE CASCADE,
-  nome         TEXT NOT NULL,
-  parentesco   TEXT NOT NULL DEFAULT 'titular',  -- 'titular' | 'dependente'
-  idade        INTEGER,
-  faixa        TEXT NOT NULL DEFAULT '',
-  criado_em    TEXT NOT NULL DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS ix_vidas_proposta ON vidas(proposta_id);
 
 -- Histórico automático: escrito pela aplicação a cada alteração relevante.
 CREATE TABLE IF NOT EXISTS historico (
@@ -121,6 +108,12 @@ export function fecharBanco() {
     bancoAberto.close();
     bancoAberto = null;
   }
+}
+
+/** true quando o banco no disco é de uma versão anterior das colunas. */
+export function esquemaDesatualizado(db) {
+  const colunas = db.prepare("PRAGMA table_info(propostas)").all().map((c) => c.name);
+  return !colunas.includes("cadastrado");
 }
 
 /** Busca (ou cria) o supervisor pelo nome. Nome é a identidade do supervisor. */
