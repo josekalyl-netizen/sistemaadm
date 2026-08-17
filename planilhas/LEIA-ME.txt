@@ -1,0 +1,16 @@
+Coloque aqui as planilhas .xlsx dos supervisores.
+
+O nome do arquivo define o supervisor:
+
+    LARISSA_2026.xlsx   ->  supervisor LARISSA
+    LUCAS_ABC_2026.xlsx ->  supervisor LUCAS ABC
+
+Depois é só rodar, na pasta do projeto:
+
+    npm start
+
+Na primeira vez o sistema converte e importa as planilhas sozinho.
+Nas próximas, ele só sobe — os dados já estão no banco.
+
+Os arquivos .xlsx desta pasta NÃO vão para o GitHub (são dados de
+clientes). Ficam só na sua máquina.

@@ -7,11 +7,13 @@
  */
 
 import { createServer } from "node:http";
+import { spawn } from "node:child_process";
 import { readFile, stat } from "node:fs/promises";
 import { extname, join, normalize, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { abrirBanco } from "./banco.js";
+import { prepararSePreciso } from "./preparar.js";
 import {
   ErroDeUso, adicionarVida, conferirDocumento, config, criarProposta,
   criarSupervisor, editarProposta, listarPropostas, mudarStatus, obterProposta,
@@ -155,9 +157,29 @@ const servidor = createServer(async (req, res) => {
   await servirEstatico(res, url.pathname);
 });
 
+// Na primeira execução, converte e importa as planilhas sozinho.
+await prepararSePreciso(db);
+
 servidor.listen(PORTA, () => {
   const n = db.prepare("SELECT COUNT(*) AS n FROM propostas").get().n;
-  console.log(`\n  Sistema Operacional de Propostas — Atlas · W3G`);
-  console.log(`  http://localhost:${PORTA}`);
-  console.log(`  ${n} propostas no banco\n`);
+  const endereco = `http://localhost:${PORTA}`;
+  console.log(`\n  ┌──────────────────────────────────────────────┐`);
+  console.log(`  │  Sistema Operacional de Propostas            │`);
+  console.log(`  │  Programa Atlas · Grupo W3G                  │`);
+  console.log(`  └──────────────────────────────────────────────┘`);
+  console.log(`\n  Abra no navegador:  ${endereco}`);
+  console.log(`  ${n} propostas no sistema`);
+  console.log(`\n  Para parar: Ctrl + C\n`);
+  abrirNavegador(endereco);
 });
+
+/** Abre o navegador sozinho. Se não der, o endereço já está impresso acima. */
+function abrirNavegador(endereco) {
+  if (process.env.SEM_NAVEGADOR) return;
+  const comando = process.platform === "darwin" ? "open"
+    : process.platform === "win32" ? "cmd" : "xdg-open";
+  const args = process.platform === "win32" ? ["/c", "start", "", endereco] : [endereco];
+  try {
+    spawn(comando, args, { stdio: "ignore", detached: true }).unref();
+  } catch { /* sem navegador: o usuário abre na mão */ }
+}

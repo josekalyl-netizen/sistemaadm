@@ -9,6 +9,8 @@ dados/sistema.db-wal
 *.xlsx
 *.xls
 dados/planilhas.json
+planilhas/*
+!planilhas/LEIA-ME.txt
 
 node_modules/
 .DS_Store

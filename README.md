@@ -15,24 +15,37 @@ filtrável, onde a organização acontece sozinha.
 
 ## Rodar
 
-Precisa de **Node 22.5 ou mais novo** (usa o SQLite embutido do próprio Node).
-Não há dependências para instalar.
+Coloque as planilhas dos supervisores na pasta `planilhas/` e rode:
 
 ```bash
-# 1. converter as planilhas dos supervisores em JSON
-python3 scripts/planilha_para_json.py ~/planilhas/*.xlsx     # precisa de openpyxl
-
-# 2. conferir antes de gravar (não grava nada)
-npm run importar:simular
-
-# 3. importar de verdade
-npm run importar
-
-# 4. subir o sistema
-npm start        # http://localhost:3000
+npm start
 ```
 
-Para reimportar do zero: `npm run importar:recomecar` (apaga e recria).
+É só isso. Na primeira execução o sistema acha as planilhas, converte, importa
+e abre o navegador sozinho. Nas próximas, ele só sobe.
+
+Precisa de **Node 22.5 ou mais novo** (usa o SQLite embutido do próprio Node) e
+de **Python 3** (só para ler os arquivos `.xlsx` na importação). Não há
+dependência de Node para instalar.
+
+Se as planilhas estiverem em outro lugar:
+
+```bash
+PLANILHAS=/caminho/da/pasta npm start
+```
+
+O sistema também procura sozinho em `Downloads`, `Área de Trabalho` e
+`Documentos`. Sem planilha nenhuma ele sobe vazio, e dá para cadastrar as
+propostas na mão.
+
+### Comandos avulsos
+
+```bash
+npm run importar:simular     # relatório de validação, sem gravar nada
+npm run importar             # importa (não duplica o que já existe)
+npm run importar:recomecar   # apaga tudo e importa do zero
+```
+
 Rodar `npm run importar` de novo **não duplica**: registros já existentes são
 reconhecidos pela chave natural e ignorados.
 
