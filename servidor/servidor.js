@@ -295,6 +295,23 @@ servidor.listen(PORTA, () => {
   abrirNavegador(endereco);
 });
 
+/**
+ * Porta ocupada é o erro mais comum do dia a dia: quase sempre é o próprio
+ * sistema, já aberto numa janela anterior. Sem isto o Node cospe um stack
+ * trace de EADDRINUSE, que não diz o que fazer.
+ */
+servidor.on("error", (erro) => {
+  if (erro.code !== "EADDRINUSE") throw erro;
+  console.error(`\n  A porta ${PORTA} já está em uso.`);
+  console.error(`  Quase sempre é o próprio sistema, aberto numa janela anterior.\n`);
+  console.error(`  Feche a janela antiga (Ctrl + C nela) ou encerre o Node:`);
+  console.error(process.platform === "win32"
+    ? `      taskkill /F /IM node.exe`
+    : `      pkill -f servidor/servidor.js`);
+  console.error(`\n  Ou suba numa porta livre:  PORTA=${PORTA + 1} npm start\n`);
+  process.exit(1);
+});
+
 /** Abre o navegador sozinho. Se não der, o endereço já está impresso acima. */
 function abrirNavegador(endereco) {
   if (process.env.SEM_NAVEGADOR) return;
