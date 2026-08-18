@@ -687,32 +687,51 @@ async function usuarios() {
 
 // -------------------------------------------------------- 5d. Corretores
 
+/** Quem está sendo editado agora: { tipo: "corretor" | "supervisor", id }. */
+let editandoCarteira = null;
+
 async function corretores() {
   const { carteira } = await api.master.carteira();
   const supervisores = (estado.config.supervisores || []);
   const ativos = carteira.reduce((n, s) => n + s.corretores.filter((c) => c.ativo).length, 0);
 
-  const linhaCorretor = (c) => `
+  const editandoEste = (tipo, id) => editandoCarteira?.tipo === tipo && editandoCarteira?.id === id;
+
+  const linhaCorretor = (c) => editandoEste("corretor", c.id) ? `
+    <div class="item-carteira editando">
+      <input class="campo" id="edt-nome" value="${esc(c.nome)}" autocomplete="off">
+      <select class="campo" id="edt-supervisor">
+        ${supervisores.map((s) => `<option value="${s.id}" ${s.id === c.supervisor_id ? "selected" : ""}>${esc(s.nome)}</option>`).join("")}
+      </select>
+      <button class="btn btn-cheio btn-mini" data-salvar-corretor="${c.id}">salvar</button>
+      <button class="btn btn-mini" data-cancelar-edicao="1">cancelar</button>
+    </div>` : `
     <div class="item-carteira ${c.ativo ? "" : "desativado"}">
       <span class="item-nome">${esc(c.nome)}</span>
       ${c.propostas ? `<span class="item-meta">${numero(c.propostas)} proposta${c.propostas === 1 ? "" : "s"}</span>` : ""}
-      ${c.ativo
-        ? `<button class="botao-x" title="Excluir corretor" data-excluir="corretores" data-id="${c.id}" data-nome="${esc(c.nome)}">×</button>`
+      ${c.ativo ? `
+        <button class="botao-x" title="Editar corretor" data-editar-corretor="${c.id}">✎</button>
+        <button class="botao-x" title="Excluir corretor" data-excluir="corretores" data-id="${c.id}" data-nome="${esc(c.nome)}">×</button>`
         : `<button class="btn btn-mini" data-reativar="corretores" data-id="${c.id}">reativar</button>`}
     </div>`;
 
   const cartao = (s) => `
     <div class="bloco cartao-carteira ${s.ativo ? "" : "desativado"}">
       <div class="cartao-topo">
-        <div style="min-width:0">
-          <div class="cartao-nome">${esc(s.nome)}</div>
-          <div class="cartao-meta">
-            ${numero(s.corretores.filter((c) => c.ativo).length)} corretor(es)${s.propostas ? ` · ${numero(s.propostas)} proposta(s)` : ""}
+        ${editandoEste("supervisor", s.id) ? `
+          <input class="campo" id="edt-supervisor-nome" value="${esc(s.nome)}" autocomplete="off">
+          <button class="btn btn-cheio btn-mini" data-salvar-supervisor="${s.id}">salvar</button>
+          <button class="btn btn-mini" data-cancelar-edicao="1">cancelar</button>` : `
+          <div style="min-width:0;flex:1">
+            <div class="cartao-nome">${esc(s.nome)}</div>
+            <div class="cartao-meta">
+              ${numero(s.corretores.filter((c) => c.ativo).length)} corretor(es)${s.propostas ? ` · ${numero(s.propostas)} proposta(s)` : ""}
+            </div>
           </div>
-        </div>
-        ${s.id === null ? "" : s.ativo
-          ? `<button class="botao-x" title="Excluir supervisor" data-excluir="supervisores" data-id="${s.id}" data-nome="${esc(s.nome)}">×</button>`
-          : `<button class="btn btn-mini" data-reativar="supervisores" data-id="${s.id}">reativar</button>`}
+          ${s.id === null ? "" : s.ativo
+            ? `<button class="botao-x" title="Renomear supervisor" data-editar-supervisor="${s.id}">✎</button>
+               <button class="botao-x" title="Excluir supervisor" data-excluir="supervisores" data-id="${s.id}" data-nome="${esc(s.nome)}">×</button>`
+            : `<button class="btn btn-mini" data-reativar="supervisores" data-id="${s.id}">reativar</button>`}`}
       </div>
       <div class="cartao-lista">
         ${s.corretores.length
@@ -795,6 +814,41 @@ async function corretores() {
       redesenhar();
     } catch (erro) { avisar(erro.message, "erro"); }
   });
+
+  const abrirEdicao = (tipo, id) => { editandoCarteira = { tipo, id }; corretores(); };
+  const fecharEdicao = () => { editandoCarteira = null; corretores(); };
+
+  $$("[data-editar-corretor]").forEach((b) =>
+    b.addEventListener("click", () => abrirEdicao("corretor", Number(b.dataset.editarCorretor))));
+  $$("[data-editar-supervisor]").forEach((b) =>
+    b.addEventListener("click", () => abrirEdicao("supervisor", Number(b.dataset.editarSupervisor))));
+  $$("[data-cancelar-edicao]").forEach((b) => b.addEventListener("click", fecharEdicao));
+
+  $$("[data-salvar-corretor]").forEach((b) => b.addEventListener("click", async () => {
+    try {
+      const r = await api.master.editarCorretor(b.dataset.salvarCorretor, {
+        nome: $("#edt-nome").value,
+        supervisor_id: $("#edt-supervisor").value,
+      });
+      editandoCarteira = null;
+      await recarregarConfig();
+      avisar(r.resumo);
+      redesenhar();
+    } catch (erro) { avisar(erro.message, "erro"); }
+  }));
+
+  $$("[data-salvar-supervisor]").forEach((b) => b.addEventListener("click", async () => {
+    try {
+      const r = await api.master.editarSupervisor(b.dataset.salvarSupervisor, $("#edt-supervisor-nome").value);
+      editandoCarteira = null;
+      await recarregarConfig();
+      avisar(r.resumo);
+      redesenhar();
+    } catch (erro) { avisar(erro.message, "erro"); }
+  }));
+
+  $("#edt-nome")?.focus();
+  $("#edt-supervisor-nome")?.focus();
 
   $$("[data-excluir]").forEach((b) => b.addEventListener("click", async () => {
     const oQue = b.dataset.excluir === "supervisores" ? "o supervisor" : "o corretor";

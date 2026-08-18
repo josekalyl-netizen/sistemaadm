@@ -17,7 +17,8 @@ import { prepararSePreciso } from "./preparar.js";
 import { contar, zerar } from "./zerar.js";
 import {
   ErroDeUso, alterarUsuario, atribuirAdm, carteira, conferirDocumento, config,
-  criarCorretor, criarProposta, criarSupervisor, criarUsuario, editarProposta,
+  criarCorretor, criarProposta, criarSupervisor, criarUsuario, editarCorretor,
+  editarProposta, editarSupervisor,
   excluirCorretor, excluirSupervisor, excluirUsuario, implantadasPorMes,
   importarCorretoresCSV, importarCorretoresXlsx, listarCorretores, listarPropostas,
   listarUsuarios, modeloCorretoresXlsx, mudarStatus, obterProposta, reativar,
@@ -240,6 +241,12 @@ async function rotaApi(req, res, url) {
     if (caminho === "/master/supervisores" && metodo === "POST") {
       res.statusCode = 201;
       return criarSupervisor(db, await lerCorpo(req));
+    }
+    if ((m = caminho.match(/^\/master\/corretores\/(\d+)$/)) && metodo === "PATCH") {
+      return editarCorretor(db, m[1], await lerCorpo(req));
+    }
+    if ((m = caminho.match(/^\/master\/supervisores\/(\d+)$/)) && metodo === "PATCH") {
+      return editarSupervisor(db, m[1], await lerCorpo(req));
     }
     if ((m = caminho.match(/^\/master\/(usuarios|corretores|supervisores)\/(\d+)$/)) && metodo === "DELETE") {
       const excluir = { usuarios: excluirUsuario, corretores: excluirCorretor, supervisores: excluirSupervisor };

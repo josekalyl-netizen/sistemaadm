@@ -289,6 +289,13 @@
 /* Tela estreita: as três colunas fixas (326px) não cabem ao lado do nome, e o
    valor era cortado fora da tela. Aqui o fim desce para a linha de baixo. */
 @media (max-width: 700px) {
+  /* O segmentado do Master tem seis seções: em 390px ele mede 644px e, como
+     o corpo esconde a rolagem horizontal, as últimas sumiam sem aviso. Vira
+     uma faixa que rola, como as abas de cima. */
+  .periodo { display: flex; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .periodo::-webkit-scrollbar { display: none; }
+  .periodo button { white-space: nowrap; flex-shrink: 0; }
+
   .linha { grid-template-columns: 3px 1fr; }
   .linha-corpo { padding-bottom: 6px; }
   .linha-fim,
@@ -552,7 +559,12 @@
   .topo-linha { height: auto; padding: 10px 0; flex-wrap: wrap; gap: 12px; }
   .marca-logo { height: 28px; }
   .marca-nome { display: none; }   /* no celular o topo é estreito: fica só a marca */
-  .seletor-usuario { padding-left: 0; border-left: none; }
+  .seletor-usuario { padding-left: 0; border-left: none; min-width: 0; }
+  /* No celular as ações do topo somam 403px numa faixa de 358: em vez de
+     estourarem para fora da tela, quebram em duas linhas e o seletor de
+     usuário encolhe. */
+  .topo-acoes { margin-left: 0; flex-wrap: wrap; width: 100%; }
+  .seletor-usuario select { max-width: 46vw; }
   .linha { grid-template-columns: 3px 1fr; }
   .linha-fim { grid-column: 2; padding-top: 0; justify-content: flex-start; }
   .ficha { width: 100vw; }
@@ -634,3 +646,11 @@ tbody tr:last-child td { border-bottom: none; }
 .cartao-topo:hover .botao-x,
 .botao-x:focus-visible { opacity: 1; }
 .botao-x:hover { background: rgb(var(--alerta) / .12); color: rgb(var(--alerta)); }
+
+/* Linha em edição: os campos ocupam a linha inteira, sem empurrar o cartão. */
+.item-carteira.editando,
+.cartao-topo:has(#edt-supervisor-nome) { flex-wrap: wrap; gap: 6px; }
+.item-carteira.editando .campo,
+.cartao-topo .campo { padding: 6px 10px; font-size: 12.5px; min-width: 0; flex: 1 1 100%; }
+.item-carteira.editando .btn,
+.cartao-topo .btn { flex: 0 0 auto; }

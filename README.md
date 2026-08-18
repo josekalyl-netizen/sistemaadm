@@ -44,6 +44,26 @@ A equipe de supervisão vem cadastrada com o sistema (`SUPERVISORES_PADRAO`, em
 `servidor/banco.js`) e é recriada sempre que não existe supervisor nenhum,
 inclusive logo depois de zerar.
 
+### Editar a carteira
+
+Em **Master › Corretores**, o ✎ de cada linha. No corretor dá para trocar o
+nome, passar para outro supervisor, ou as duas coisas; no cartão do supervisor,
+renomear.
+
+Renomear um corretor atualiza também o nome dentro das propostas — lá o corretor
+é texto, e deixar o antigo faria a proposta sumir da carteira dele. Já trocar de
+supervisor mexe só na carteira de hoje: as propostas antigas continuam com o
+supervisor que as acompanhou.
+
+### Nomes sem aspas
+
+Nome de corretor, supervisor e ADM entra sem aspas de nenhum tipo — retas,
+curvas, simples ou duplas. Elas chegam de planilha (`"NOME"`) e de
+copiar-e-colar, e uma aspa perdida faz a mesma pessoa virar dois registros:
+`"LARISSA"` e `LARISSA` não são iguais em nenhuma comparação, e a carteira
+racha ao meio. As que já estavam gravadas são limpas na abertura do banco,
+inclusive dentro das propostas.
+
 ### Excluir usuário, corretor ou supervisor
 
 Em **Master › Corretores** (o × em cada linha) e **Master › Usuários** (botão

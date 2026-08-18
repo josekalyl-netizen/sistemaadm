@@ -96,6 +96,19 @@ export function texto(valor) {
   return String(valor ?? "").replace(/\s+/g, " ").trim();
 }
 
+/**
+ * Nome de pessoa: corretor, supervisor, responsável ADM.
+ *
+ * Tira aspas de qualquer tipo — retas, curvas, simples e duplas. Elas chegam
+ * de planilha (célula exportada como \"NOME\") e de copiar-e-colar, e uma vez
+ * dentro do banco viram outra pessoa: "LARISSA" e LARISSA não são o mesmo
+ * registro em nenhuma comparação, então a mesma supervisora passa a existir
+ * duas vezes e a carteira racha ao meio.
+ */
+export function nomeLimpo(valor) {
+  return texto(String(valor ?? "").replace(/["'\u2018\u2019\u201c\u201d\u00ab\u00bb]/g, " "));
+}
+
 export function somenteDigitos(valor) {
   return texto(valor).replace(/\D/g, "");
 }

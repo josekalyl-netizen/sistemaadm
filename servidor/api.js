@@ -12,6 +12,7 @@
 import {
   CODIGOS_ETAPA, ETAPAS, NIVEIS, TIPOS_PENDENCIA, etapa, formatarDocumento,
   hoje, lerData, lerValor, normalizar, somenteDigitos, texto, validarDocumento, verdadeiro,
+  nomeLimpo,
 } from "./dominio.js";
 import { preparar, registrarHistorico, supervisorPorNome, usuarioPorNome } from "./banco.js";
 import { gerarXlsx, lerXlsx } from "./xlsx.js";
@@ -208,8 +209,8 @@ function resolverSupervisor(db, entrada) {
     if (!s) throw new ErroDeUso("Supervisor não encontrado.");
     return s;
   }
-  if (texto(entrada.nome_supervisor)) return supervisorPorNome(db, entrada.nome_supervisor);
-  const corretor = texto(entrada.corretor).toUpperCase();
+  if (nomeLimpo(entrada.nome_supervisor)) return supervisorPorNome(db, entrada.nome_supervisor);
+  const corretor = nomeLimpo(entrada.corretor).toUpperCase();
   if (corretor) {
     const vinculo = db.prepare(`
       SELECT s.* FROM corretores c JOIN supervisores s ON s.id = c.supervisor_id
@@ -232,8 +233,8 @@ function resolverAdm(db, entrada) {
     if (!u) throw new ErroDeUso("Responsável ADM não encontrado.");
     return u;
   }
-  if (texto(entrada.nome_adm)) {
-    const u = db.prepare("SELECT * FROM usuarios WHERE nome = ?").get(texto(entrada.nome_adm).toUpperCase());
+  if (nomeLimpo(entrada.nome_adm)) {
+    const u = db.prepare("SELECT * FROM usuarios WHERE nome = ?").get(nomeLimpo(entrada.nome_adm).toUpperCase());
     if (!u) throw new ErroDeUso("Responsável ADM não encontrado.");
     return u;
   }
@@ -245,9 +246,9 @@ function validarObrigatorios(entrada) {
   const faltando = [];
   if (!texto(entrada.razao_social)) faltando.push("Empresa");
   if (!somenteDigitos(entrada.documento)) faltando.push("CPF/CNPJ");
-  if (!texto(entrada.corretor)) faltando.push("Corretor");
+  if (!nomeLimpo(entrada.corretor)) faltando.push("Corretor");
   if (!texto(entrada.operadora)) faltando.push("Operadora");
-  if (!texto(entrada.usuario_id) && !texto(entrada.nome_adm)) faltando.push("Responsável ADM");
+  if (!texto(entrada.usuario_id) && !nomeLimpo(entrada.nome_adm)) faltando.push("Responsável ADM");
   if (lerValor(entrada.valor) === null) faltando.push("Valor");
   if (!lerData(entrada.data_proposta)) faltando.push("Emissão");
   if (faltando.length) {
@@ -272,7 +273,7 @@ export function criarProposta(db, entrada, autor = "operacional") {
     documento_exibido: formatarDocumento(entrada.documento) || texto(entrada.documento),
     numero_proposta: texto(entrada.numero_proposta),
     operadora: texto(entrada.operadora).toUpperCase(),
-    corretor: texto(entrada.corretor).toUpperCase(),
+    corretor: nomeLimpo(entrada.corretor).toUpperCase(),
     valor: lerValor(entrada.valor),
     data_proposta: lerData(entrada.data_proposta) || hoje(),
     data_validade: lerData(entrada.data_validade),
@@ -393,7 +394,7 @@ export function editarProposta(db, id, entrada, autor = "operacional") {
       if (!supervisor || supervisor.id === atual.supervisor_id) continue;
       const antes = db.prepare("SELECT nome FROM supervisores WHERE id = ?").get(atual.supervisor_id);
       set.supervisor_id = supervisor.id;
-      mudancas.push(`Supervisor: "${antes?.nome || "—"}" → "${supervisor.nome}"`);
+      mudancas.push(`Supervisor: ${antes?.nome || "—"} → ${supervisor.nome}`);
       continue;
     }
 
@@ -406,7 +407,7 @@ export function editarProposta(db, id, entrada, autor = "operacional") {
         : "SEM RESPONSÁVEL";
       set.usuario_id = novoId;
       set.responsavel = adm?.nome || "";
-      mudancas.push(`Responsável ADM: "${antes}" → "${adm?.nome || "SEM RESPONSÁVEL"}"`);
+      mudancas.push(`Responsável ADM: ${antes} → ${adm?.nome || "SEM RESPONSÁVEL"}`);
       continue;
     }
 
@@ -421,7 +422,7 @@ export function editarProposta(db, id, entrada, autor = "operacional") {
     if ((antes ?? null) === (novo ?? null) || String(antes ?? "") === String(novo ?? "")) continue;
 
     set[campo] = novo;
-    mudancas.push(`${ROTULO_CAMPO[campo] || campo}: "${antes ?? ""}" → "${novo ?? ""}"`);
+    mudancas.push(`${ROTULO_CAMPO[campo] || campo}: ${antes ?? "—"} → ${novo ?? "—"}`);
   }
 
   if ("documento" in entrada) {
@@ -429,7 +430,7 @@ export function editarProposta(db, id, entrada, autor = "operacional") {
     if (digitos !== atual.documento) {
       set.documento = digitos;
       set.documento_exibido = formatarDocumento(entrada.documento) || texto(entrada.documento);
-      mudancas.push(`CNPJ: "${atual.documento_exibido}" → "${set.documento_exibido}"`);
+      mudancas.push(`CNPJ: ${atual.documento_exibido} → ${set.documento_exibido}`);
     }
   }
 
@@ -488,7 +489,7 @@ export function listarUsuarios(db) {
 }
 
 export function criarUsuario(db, entrada) {
-  const nome = texto(entrada.nome).toUpperCase();
+  const nome = nomeLimpo(entrada.nome).toUpperCase();
   if (!nome) throw new ErroDeUso("Informe o nome da ADM.");
   if (db.prepare("SELECT id FROM usuarios WHERE nome = ?").get(nome)) {
     throw new ErroDeUso("Já existe um usuário com esse nome.", 409);
@@ -506,7 +507,7 @@ export function alterarUsuario(db, id, entrada) {
   if (!usuario) throw new ErroDeUso("Usuário não encontrado.", 404);
 
   if (entrada.nome !== undefined) {
-    const nome = texto(entrada.nome).toUpperCase();
+    const nome = nomeLimpo(entrada.nome).toUpperCase();
     if (!nome) throw new ErroDeUso("O nome não pode ficar vazio.");
     const outro = db.prepare("SELECT id FROM usuarios WHERE nome = ? AND id <> ?").get(nome, usuario.id);
     if (outro) throw new ErroDeUso("Já existe outro usuário com esse nome.", 409);
@@ -548,8 +549,8 @@ function importarCorretores(db, pares) {
   let ignorados = 0;
 
   for (const [corretorBruto, supervisorBruto] of pares) {
-    const nome = texto(corretorBruto).toUpperCase();
-    const nomeSupervisor = texto(supervisorBruto);
+    const nome = nomeLimpo(corretorBruto).toUpperCase();
+    const nomeSupervisor = nomeLimpo(supervisorBruto);
     // cabeçalho da planilha, em qualquer capitalização
     if (nome === "CORRETOR") continue;
     if (!nome && !nomeSupervisor) continue;
@@ -580,7 +581,7 @@ function importarCorretores(db, pares) {
  * ou correção em massa.
  */
 export function criarCorretor(db, entrada) {
-  const nome = texto(entrada.nome).toUpperCase();
+  const nome = nomeLimpo(entrada.nome).toUpperCase();
   if (!nome) throw new ErroDeUso("Informe o nome do corretor.");
 
   const supervisor = db.prepare("SELECT * FROM supervisores WHERE id = ? AND ativo = 1")
@@ -630,7 +631,7 @@ export function carteira(db) {
 }
 
 export function criarSupervisor(db, entrada) {
-  const nome = texto(entrada.nome).toUpperCase();
+  const nome = nomeLimpo(entrada.nome).toUpperCase();
   if (!nome) throw new ErroDeUso("Informe o nome do supervisor.");
   const existente = db.prepare("SELECT id, ativo FROM supervisores WHERE nome = ?").get(nome);
   if (existente) {
@@ -640,6 +641,62 @@ export function criarSupervisor(db, entrada) {
   }
   db.prepare("INSERT INTO supervisores (nome) VALUES (?)").run(nome);
   return { nome, reativado: false };
+}
+
+/**
+ * Editar um corretor sem desfazer nada: trocar o nome, passar para outro
+ * supervisor, ou as duas coisas.
+ *
+ * Renomear atualiza também o nome copiado dentro das propostas — lá o corretor
+ * é texto, e deixar o antigo faria a proposta sumir da carteira dele. Trocar de
+ * supervisor mexe só na carteira: as propostas antigas continuam com o
+ * supervisor que tinham quando foram feitas, porque foi ele quem as
+ * acompanhou. Quem muda de mão é o corretor, não o histórico.
+ */
+export function editarCorretor(db, id, entrada) {
+  const corretor = db.prepare("SELECT * FROM corretores WHERE id = ?").get(Number(id));
+  if (!corretor) throw new ErroDeUso("Corretor não encontrado.", 404);
+
+  const mudou = [];
+
+  if (entrada.nome !== undefined) {
+    const nome = nomeLimpo(entrada.nome).toUpperCase();
+    if (!nome) throw new ErroDeUso("O nome não pode ficar vazio.");
+    if (nome !== corretor.nome) {
+      const outro = db.prepare("SELECT id FROM corretores WHERE nome = ? AND id <> ?").get(nome, corretor.id);
+      if (outro) throw new ErroDeUso(`Já existe outro corretor chamado ${nome}.`, 409);
+      db.prepare("UPDATE corretores SET nome = ? WHERE id = ?").run(nome, corretor.id);
+      db.prepare("UPDATE propostas SET corretor = ? WHERE corretor = ?").run(nome, corretor.nome);
+      mudou.push(`${corretor.nome} agora é ${nome}`);
+    }
+  }
+
+  if (entrada.supervisor_id !== undefined && Number(entrada.supervisor_id) !== corretor.supervisor_id) {
+    const supervisor = db.prepare("SELECT * FROM supervisores WHERE id = ? AND ativo = 1")
+      .get(Number(entrada.supervisor_id));
+    if (!supervisor) throw new ErroDeUso("Escolha o supervisor responsável.");
+    db.prepare("UPDATE corretores SET supervisor_id = ? WHERE id = ?").run(supervisor.id, corretor.id);
+    mudou.push(`passou para a carteira de ${supervisor.nome}`);
+  }
+
+  if (!mudou.length) return { mudou: false, resumo: "Nada mudou." };
+  return { mudou: true, resumo: `${mudou.join(" e ")}.` };
+}
+
+/** Renomear supervisor. O vínculo é por id, então a carteira segue junto. */
+export function editarSupervisor(db, id, entrada) {
+  const supervisor = db.prepare("SELECT * FROM supervisores WHERE id = ?").get(Number(id));
+  if (!supervisor) throw new ErroDeUso("Supervisor não encontrado.", 404);
+
+  const nome = nomeLimpo(entrada.nome).toUpperCase();
+  if (!nome) throw new ErroDeUso("O nome não pode ficar vazio.");
+  if (nome === supervisor.nome) return { mudou: false, resumo: "Nada mudou." };
+
+  const outro = db.prepare("SELECT id FROM supervisores WHERE nome = ? AND id <> ?").get(nome, supervisor.id);
+  if (outro) throw new ErroDeUso(`Já existe outro supervisor chamado ${nome}.`, 409);
+
+  db.prepare("UPDATE supervisores SET nome = ? WHERE id = ?").run(nome, supervisor.id);
+  return { mudou: true, resumo: `${supervisor.nome} agora é ${nome}.` };
 }
 
 /**

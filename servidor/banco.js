@@ -7,6 +7,7 @@
  * não existem tabelas separadas por etapa.
  */
 
+import { nomeLimpo } from "./dominio.js";
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -205,6 +206,7 @@ export function abrirBanco() {
 
   db.exec(ESQUEMA);
   migrarColunasNovas(db);
+  limparAspasDosNomes(db);
   semearSupervisores(db);
   bancoAberto = db;
   return db;
@@ -290,6 +292,44 @@ export function preparar(db, sql) {
  * (ver supervisorPorNome) — se entrassem diferente, o mesmo supervisor viraria
  * dois no dia em que uma planilha trouxesse o nome de outro jeito.
  */
+/**
+ * Tira aspas de nomes que já estão gravados. Roda a cada abertura, mas só
+ * escreve quando encontra alguma — planilha antiga trouxe células como
+ * \"NOME\", e uma aspa perdida faz a mesma pessoa virar dois registros.
+ *
+ * Duas naturezas diferentes, tratadas diferente:
+ *   · cadastros (supervisores, corretores, usuários) — a linha limpa pode já
+ *     existir; nesse caso a suja é o duplicado e é removida.
+ *   · propostas — corretor e responsável são cópias de texto. Aqui só se
+ *     corrige o nome. Nunca se apaga linha: a proposta é o dado, não o
+ *     cadastro, e duas propostas do mesmo corretor são normais.
+ */
+function limparAspasDosNomes(db) {
+  const ASPAS = ['"', "'", "\u2018", "\u2019", "\u201c", "\u201d"];
+  const onde = (coluna) => ASPAS.map(() => `${coluna} LIKE ?`).join(" OR ");
+  const curinga = ASPAS.map((a) => `%${a}%`);
+
+  for (const [tabela, coluna] of [["supervisores", "nome"], ["corretores", "nome"], ["usuarios", "nome"]]) {
+    const sujas = db.prepare(`SELECT id, ${coluna} AS v FROM ${tabela} WHERE ${onde(coluna)}`).all(...curinga);
+    for (const { id, v } of sujas) {
+      const limpo = nomeLimpo(v).toUpperCase();
+      if (!limpo || limpo === v) continue;
+      const jaExiste = db.prepare(`SELECT id FROM ${tabela} WHERE ${coluna} = ? AND id <> ?`).get(limpo, id);
+      if (jaExiste) db.prepare(`DELETE FROM ${tabela} WHERE id = ?`).run(id);
+      else db.prepare(`UPDATE ${tabela} SET ${coluna} = ? WHERE id = ?`).run(limpo, id);
+    }
+  }
+
+  for (const coluna of ["corretor", "responsavel"]) {
+    const sujas = db.prepare(`SELECT id, ${coluna} AS v FROM propostas WHERE ${onde(coluna)}`).all(...curinga);
+    for (const { id, v } of sujas) {
+      const limpo = nomeLimpo(v).toUpperCase();
+      if (limpo === v) continue;
+      db.prepare(`UPDATE propostas SET ${coluna} = ? WHERE id = ?`).run(limpo, id);
+    }
+  }
+}
+
 export const SUPERVISORES_PADRAO = [
   "KALYL SOARES",
   "LARISSA LARA",
@@ -312,7 +352,7 @@ export function semearSupervisores(db) {
 }
 
 export function supervisorPorNome(db, nome) {
-  const limpo = String(nome || "").trim().toUpperCase();
+  const limpo = nomeLimpo(nome).toUpperCase();
   if (!limpo) return null;
   const achado = db.prepare("SELECT * FROM supervisores WHERE nome = ?").get(limpo);
   if (achado) return achado;
