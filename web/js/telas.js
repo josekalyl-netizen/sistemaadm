@@ -285,7 +285,7 @@ async function implantadas() {
   return implantadasLista(meses);
 }
 
-function voltarLink(texto, aoClicar) {
+function voltarLink(texto) {
   return `<button class="btn btn-limpo btn-mini" id="impl-voltar" style="padding-left:0">← ${esc(texto)}</button>`;
 }
 
@@ -322,7 +322,7 @@ function implantadasMeses(meses) {
   const total = doAno.reduce((a, b) => a + b.quantidade, 0);
 
   alvo().innerHTML = `
-    ${cabecalhoTela("Implantadas", `${implAno} · ${numero(total)} propostas · escolha o mês`, voltarLink())}
+    ${cabecalhoTela("Implantadas", `${implAno} · ${numero(total)} propostas · escolha o mês`, voltarLink("todos os anos"))}
     <div class="numeros">
       ${doAno.map((m) => `
         <button class="numero-bloco acionavel" data-mes="${m.mes}" style="text-align:left;border:none;cursor:pointer">
@@ -352,7 +352,7 @@ async function implantadasLista(meses) {
     ${cabecalhoTela(
       "Implantadas",
       `${esc(MESES[Number(implMes) - 1] || implMes)} de ${implAno} · ${numero(lista.total)} propostas · ${moeda(registro?.valor ?? 0)}`,
-      voltarLink(),
+      voltarLink(`meses de ${implAno}`),
     )}
     <div id="lista"></div>`;
 

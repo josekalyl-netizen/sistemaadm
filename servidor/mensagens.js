@@ -124,10 +124,18 @@ export function escolherMensagem(db, proposta, { pendencia = "", indice = null }
       "SELECT indice FROM mensagens_uso WHERE corretor = ? AND etapa = ? ORDER BY id DESC",
     ).all(corretor, etapaCodigo).map((r) => r.indice);
 
-    const inéditos = modelos.map((_, i) => i).filter((i) => !usados.includes(i));
-    const candidatos = inéditos.length
-      ? inéditos
-      : modelos.map((_, i) => i).filter((i) => i !== usados[0]);   // não repete a última
+    const todos = modelos.map((_, i) => i);
+    let candidatos = todos.filter((i) => !usados.includes(i));
+
+    // Todas já rodaram com esse corretor: recomeça o ciclo, evitando emendar a
+    // mesma mensagem duas vezes seguidas.
+    if (!candidatos.length) candidatos = todos.filter((i) => i !== usados[0]);
+
+    // Etapa que tem UMA mensagem só (Nova, Cotação, Proposta enviada,
+    // Implantada): o filtro acima esvazia a lista e não sobra o que sortear.
+    // Aqui repetir é o comportamento certo — é a mensagem-padrão da etapa.
+    if (!candidatos.length) candidatos = todos;
+
     escolhido = candidatos[Math.floor(Math.random() * candidatos.length)];
   }
 
