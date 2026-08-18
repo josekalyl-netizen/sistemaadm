@@ -69,6 +69,41 @@ function senhaConfere(informada) {
   return timingSafeEqual(a, b);
 }
 
+/**
+ * Troca a senha da Área Master, gravando no mesmo arquivo fora do Git.
+ *
+ * A senha nova nunca aparece em log, em resposta da API nem no repositório —
+ * só no arquivo, com permissão 0600. Se SENHA_MASTER estiver no ambiente, ela
+ * ganha da gravação (ver a ordem lá em cima), e trocar aqui não teria efeito
+ * nenhum: melhor recusar e dizer isso do que deixar a pessoa achando que trocou.
+ */
+export function trocarSenhaMaster(atual, nova) {
+  if (process.env.SENHA_MASTER) {
+    throw new Error(
+      "A senha está vindo da variável de ambiente SENHA_MASTER, que tem " +
+      "prioridade sobre o arquivo. Troque lá, ou suba o sistema sem ela.",
+    );
+  }
+  if (!senhaConfere(atual)) throw new Error("A senha atual não confere.");
+
+  const limpa = String(nova ?? "").trim();
+  if (limpa.length < 8) throw new Error("A senha nova precisa de pelo menos 8 caracteres.");
+  if (limpa === String(atual ?? "").trim()) throw new Error("A senha nova é igual à atual.");
+
+  mkdirSync(dirname(ARQUIVO_SENHA), { recursive: true });
+  writeFileSync(ARQUIVO_SENHA, `${limpa}\n`, { mode: 0o600 });
+  senhaEmMemoria = limpa;
+
+  // Quem estava logado com a senha antiga cai — inclusive esta aba. Trocar a
+  // senha e manter as sessões abertas seria trocar só pela metade.
+  sessoes.clear();
+}
+
+/** true quando a senha vem do ambiente e o arquivo é ignorado. */
+export function senhaVemDoAmbiente() {
+  return Boolean(process.env.SENHA_MASTER);
+}
+
 export function entrar(senha) {
   if (!senhaConfere(senha)) return null;
   const token = randomBytes(24).toString("hex");

@@ -34,6 +34,15 @@ npm run zerar                           # mostra o que existe, sem apagar
 npm run zerar -- --agora                # deixa o sistema em branco
 ```
 
+### Trocar a senha da Área Master
+
+Em **Master › Sistema**, informando a senha atual. Ela fica só na máquina, em
+`dados/senha-master.txt` (fora do Git, permissão 0600) — nunca no repositório.
+Ao trocar, todas as sessões abertas caem.
+
+Se o sistema estiver subindo com a variável `SENHA_MASTER`, ela tem prioridade
+sobre o arquivo e a troca pela tela fica bloqueada, com o aviso na própria seção.
+
 ### Deixar o sistema em branco
 
 Pela tela: **Master › Sistema**. A seção mostra quanto existe hoje em cada

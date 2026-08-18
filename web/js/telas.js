@@ -734,7 +734,7 @@ const NOME_TABELA = {
  * preenchimento é decisão de quem usa o sistema — não de quem sabe rodar npm.
  */
 async function sistema() {
-  const { tabelas } = await api.master.conteudo();
+  const { tabelas, senha_do_ambiente } = await api.master.conteudo();
   const total = Object.values(tabelas).reduce((a, b) => a + b, 0);
 
   $("#master-corpo").innerHTML = `
@@ -746,6 +746,31 @@ async function sistema() {
         <tr><td><b>Total</b></td><td class="num mono"><b>${numero(total)}</b></td></tr>
       </tbody>
     </table>
+
+    <div class="secao" style="margin-top:34px">Senha da Área Master</div>
+    ${senha_do_ambiente ? `
+      <p class="dica" style="margin:0;max-width:560px">
+        A senha está vindo da variável de ambiente <span class="mono">SENHA_MASTER</span>,
+        que tem prioridade sobre o arquivo. Para trocar pela tela, suba o sistema sem ela.
+      </p>` : `
+      <p class="dica" style="margin:0 0 14px;max-width:560px">
+        Fica guardada só nesta máquina, em <span class="mono">dados/senha-master.txt</span>,
+        fora do Git. Ao trocar, todas as sessões abertas caem — inclusive esta.
+      </p>
+      <div style="display:grid;grid-template-columns:repeat(2, minmax(0, 210px));gap:12px">
+        <div>
+          <label class="rotulo" for="senha-atual">Senha atual</label>
+          <input id="senha-atual" class="campo" type="password" autocomplete="current-password">
+        </div>
+        <div>
+          <label class="rotulo" for="senha-nova">Senha nova</label>
+          <input id="senha-nova" class="campo" type="password" autocomplete="new-password"
+                 placeholder="mínimo 8 caracteres">
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <button class="btn btn-cheio btn-mini" id="senha-trocar">Trocar senha</button>
+      </div>`}
 
     <div class="secao" style="margin-top:34px">Zerar o sistema</div>
     <p class="dica" style="margin:0 0 14px;max-width:560px">
@@ -760,6 +785,17 @@ async function sistema() {
     <div style="margin-top:12px">
       <button class="btn btn-perigo btn-mini" id="zerar-agora" disabled>Apagar tudo e começar do zero</button>
     </div>`;
+
+  $("#senha-trocar")?.addEventListener("click", async () => {
+    const atual = $("#senha-atual").value;
+    const nova = $("#senha-nova").value;
+    try {
+      await api.master.trocarSenha(atual, nova);
+      avisar("Senha trocada. Entre de novo com a senha nova.");
+      estado.masterAberto = false;
+      setTimeout(() => location.reload(), 1200);
+    } catch (erro) { avisar(erro.message, "erro"); }
+  });
 
   const campo = $("#zerar-confirma");
   const botao = $("#zerar-agora");

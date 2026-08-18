@@ -27,8 +27,8 @@ import {
 } from "./acompanhamento.js";
 import { escolherMensagem, registrarUso } from "./mensagens.js";
 import {
-  COOKIE_LIMPO, cookieDeSessao, entrar, sair, senhaMaster, sessaoValida,
-  tokenDoPedido,
+  COOKIE_LIMPO, cookieDeSessao, entrar, sair, senhaMaster, senhaVemDoAmbiente,
+  sessaoValida, tokenDoPedido, trocarSenhaMaster,
 } from "./autenticacao.js";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
@@ -235,7 +235,20 @@ async function rotaApi(req, res, url) {
       return importarCorretoresCSV(db, corpo.csv || "");
     }
     if (caminho === "/master/conteudo" && metodo === "GET") {
-      return { tabelas: contar(db) };
+      return { tabelas: contar(db), senha_do_ambiente: senhaVemDoAmbiente() };
+    }
+    // Troca de senha. A senha nova só vai no pedido — nunca volta na resposta,
+    // nem entra em log.
+    if (caminho === "/master/senha" && metodo === "POST") {
+      const corpo = await lerCorpo(req);
+      try {
+        trocarSenhaMaster(corpo.atual, corpo.nova);
+      } catch (erro) {
+        throw new ErroDeUso(erro.message);
+      }
+      // trocarSenhaMaster derruba todas as sessões, esta inclusive.
+      res.setHeader("Set-Cookie", COOKIE_LIMPO);
+      return { trocada: true };
     }
     // Zerar o sistema pela tela, sem terminal. A confirmação digitada não é
     // burocracia: é a única barreira entre um clique errado e 2 mil propostas.

@@ -169,6 +169,7 @@ export const api = {
     relatorio: (f) => pedir(`/api/master/relatorio?${query(f)}`),
     corretoresCSV: (csv) => pedir("/api/master/corretores/csv", { method: "POST", corpo: { csv } }),
     conteudo: () => pedir("/api/master/conteudo"),
+    trocarSenha: (atual, nova) => pedir("/api/master/senha", { method: "POST", corpo: { atual, nova } }),
     zerar: (confirmacao) => pedir("/api/master/zerar", { method: "POST", corpo: { confirmacao } }),
   },
 };
