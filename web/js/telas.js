@@ -672,6 +672,7 @@ async function usuarios() {
 
 async function corretores() {
   const lista = estado.config.corretores_cadastro || [];
+  const supervisores = estado.config.supervisores || [];
   const porSupervisor = new Map();
   for (const c of lista) {
     const chave = c.supervisor_nome || "sem supervisor";
@@ -680,7 +681,25 @@ async function corretores() {
   }
 
   $("#master-corpo").innerHTML = `
-    <div class="secao" style="margin-top:6px">Subir carteira (Excel)</div>
+    <div class="secao" style="margin-top:6px">Cadastrar um corretor</div>
+    <div class="grade" style="max-width:640px">
+      <div>
+        <label class="rotulo" for="novo-corretor">Nome do corretor</label>
+        <input id="novo-corretor" class="campo" placeholder="nome completo" autocomplete="off">
+      </div>
+      <div>
+        <label class="rotulo" for="novo-supervisor">Supervisor responsável</label>
+        <select id="novo-supervisor" class="campo">
+          <option value="">— escolha —</option>
+          ${supervisores.map((s) => `<option value="${s.id}">${esc(s.nome)}</option>`).join("")}
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:14px">
+      <button class="btn btn-cheio btn-mini" id="novo-corretor-salvar">Cadastrar corretor</button>
+    </div>
+
+    <div class="secao" style="margin-top:34px">Subir carteira (Excel)</div>
     <p class="dica" style="margin:0 0 14px;max-width:640px">
       Duas colunas: <b>Corretor</b> e <b>Supervisor</b>, uma linha por corretor. Baixe o modelo,
       preencha e envie de volta. Supervisor que ainda não existe é criado na hora, e corretor
@@ -715,6 +734,19 @@ async function corretores() {
           <div class="linha-meta" style="font-size:12.5px">${corr.map((c) => esc(c.nome)).join(" · ")}</div>
         </div>`).join("") || listaVazia("Nenhum corretor cadastrado ainda.")}
     </div>`;
+
+  $("#novo-corretor-salvar").addEventListener("click", async () => {
+    const nome = $("#novo-corretor").value.trim();
+    const supervisor_id = $("#novo-supervisor").value;
+    try {
+      const r = await api.master.criarCorretor({ nome, supervisor_id });
+      await recarregarConfig();
+      avisar(r.atualizado
+        ? `${r.nome} passou para a carteira de ${r.supervisor}.`
+        : `${r.nome} cadastrado com ${r.supervisor}.`);
+      redesenhar();
+    } catch (erro) { avisar(erro.message, "erro"); }
+  });
 
   $("#modelo-baixar").addEventListener("click", async () => {
     // fetch, e não link direto: o download tem que ir com o cookie do Master

@@ -205,6 +205,7 @@ export function abrirBanco() {
 
   db.exec(ESQUEMA);
   migrarColunasNovas(db);
+  semearSupervisores(db);
   bancoAberto = db;
   return db;
 }
@@ -281,6 +282,35 @@ export function preparar(db, sql) {
 }
 
 /** Busca (ou cria) o supervisor pelo nome. Nome é a identidade do supervisor. */
+/**
+ * A equipe de supervisão do grupo. Fica no código porque é fixa: são as
+ * pessoas, não um cadastro que muda toda semana.
+ *
+ * Em caixa alta porque é assim que todo nome de supervisor é guardado no banco
+ * (ver supervisorPorNome) — se entrassem diferente, o mesmo supervisor viraria
+ * dois no dia em que uma planilha trouxesse o nome de outro jeito.
+ */
+export const SUPERVISORES_PADRAO = [
+  "KALYL SOARES",
+  "LARISSA LARA",
+  "LUCAS SOUZA",
+  "LUCAS VINICIUS",
+  "KATHELLYN GODOY",
+];
+
+/**
+ * Cria a equipe só quando não existe supervisor nenhum — primeira execução, ou
+ * logo depois de zerar o sistema. Quem já tem sua lista montada não é
+ * atropelado, e quem apagou um supervisor de propósito não o vê voltar (a
+ * menos que apague todos).
+ */
+export function semearSupervisores(db) {
+  const quantos = db.prepare("SELECT COUNT(*) AS n FROM supervisores").get().n;
+  if (quantos > 0) return;
+  const inserir = db.prepare("INSERT INTO supervisores (nome) VALUES (?)");
+  for (const nome of SUPERVISORES_PADRAO) inserir.run(nome);
+}
+
 export function supervisorPorNome(db, nome) {
   const limpo = String(nome || "").trim().toUpperCase();
   if (!limpo) return null;

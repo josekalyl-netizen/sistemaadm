@@ -14,7 +14,7 @@
  * a importação automática:  npm run zerar -- --religar-importacao
  */
 
-import { abrirBanco, fecharBanco } from "./banco.js";
+import { abrirBanco, fecharBanco, semearSupervisores } from "./banco.js";
 
 /* A ordem importa: filhos antes dos pais, senão a chave estrangeira barra. */
 const TABELAS = [
@@ -45,6 +45,11 @@ export function zerar(db) {
   db.exec("PRAGMA foreign_keys = OFF");
   for (const t of TABELAS) db.exec(`DELETE FROM ${t}`);
   db.exec("PRAGMA foreign_keys = ON");
+  // A equipe de supervisão volta na hora. Sem isto, zerar pela tela deixaria a
+  // lista de supervisores vazia até alguém reiniciar o servidor — e o cadastro
+  // de corretor, que escolhe entre os existentes, ficaria sem nada para
+  // escolher justamente no momento em que se vai preencher tudo de novo.
+  semearSupervisores(db);
   desligarImportacaoAutomatica(db);
   db.exec("VACUUM");
 }

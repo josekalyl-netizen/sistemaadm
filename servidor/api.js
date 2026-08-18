@@ -574,6 +574,32 @@ function importarCorretores(db, pares) {
   return { importados, atualizados, ignorados };
 }
 
+/**
+ * Cadastro avulso de um corretor: nome digitado, supervisor escolhido entre os
+ * que existem. É o caminho de todo dia — subir planilha é para carteira nova
+ * ou correção em massa.
+ */
+export function criarCorretor(db, entrada) {
+  const nome = texto(entrada.nome).toUpperCase();
+  if (!nome) throw new ErroDeUso("Informe o nome do corretor.");
+
+  const supervisor = db.prepare("SELECT * FROM supervisores WHERE id = ? AND ativo = 1")
+    .get(Number(entrada.supervisor_id));
+  if (!supervisor) throw new ErroDeUso("Escolha o supervisor responsável.");
+
+  const existente = db.prepare("SELECT id, supervisor_id, ativo FROM corretores WHERE nome = ?").get(nome);
+  if (existente) {
+    if (existente.supervisor_id === supervisor.id && existente.ativo === 1) {
+      throw new ErroDeUso(`${nome} já está na carteira de ${supervisor.nome}.`);
+    }
+    db.prepare("UPDATE corretores SET supervisor_id = ?, ativo = 1 WHERE id = ?").run(supervisor.id, existente.id);
+    return { nome, supervisor: supervisor.nome, atualizado: true };
+  }
+
+  db.prepare("INSERT INTO corretores (nome, supervisor_id) VALUES (?, ?)").run(nome, supervisor.id);
+  return { nome, supervisor: supervisor.nome, atualizado: false };
+}
+
 /** Importa "corretor,supervisor" em texto (uma linha por corretor). */
 export function importarCorretoresCSV(db, csv) {
   const pares = String(csv || "")

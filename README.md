@@ -34,6 +34,16 @@ npm run zerar                           # mostra o que existe, sem apagar
 npm run zerar -- --agora                # deixa o sistema em branco
 ```
 
+### Cadastrar corretor
+
+Em **Master › Corretores**: nome do corretor em texto, supervisor escolhido
+entre os existentes. Cadastrar de novo o mesmo corretor com outro supervisor é
+como se corrige um vínculo errado — nada é apagado.
+
+A equipe de supervisão vem cadastrada com o sistema (`SUPERVISORES_PADRAO`, em
+`servidor/banco.js`) e é recriada sempre que não existe supervisor nenhum,
+inclusive logo depois de zerar.
+
 ### Subir a carteira de corretores (Excel)
 
 Em **Master › Corretores**: baixe o modelo `.xlsx`, preencha e envie de volta.

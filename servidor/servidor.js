@@ -17,10 +17,9 @@ import { prepararSePreciso } from "./preparar.js";
 import { contar, zerar } from "./zerar.js";
 import {
   ErroDeUso, alterarUsuario, atribuirAdm, conferirDocumento, config,
-  criarProposta, criarUsuario, editarProposta, implantadasPorMes,
+  criarCorretor, criarProposta, criarUsuario, editarProposta, implantadasPorMes,
   importarCorretoresCSV, importarCorretoresXlsx, listarCorretores, listarPropostas,
-  listarUsuarios, modeloCorretoresXlsx,
-  mudarStatus, obterProposta,
+  listarUsuarios, modeloCorretoresXlsx, mudarStatus, obterProposta,
 } from "./api.js";
 import {
   fecharDiasPassados, historicoDiario, porUsuario, relatorio, situacaoAtual,
@@ -233,6 +232,10 @@ async function rotaApi(req, res, url) {
     }
     if ((m = caminho.match(/^\/master\/usuarios\/(\d+)$/)) && metodo === "PATCH") {
       return alterarUsuario(db, m[1], await lerCorpo(req));
+    }
+    if (caminho === "/master/corretores" && metodo === "POST") {
+      res.statusCode = 201;
+      return criarCorretor(db, await lerCorpo(req));
     }
     if (caminho === "/master/corretores/csv" && metodo === "POST") {
       const corpo = await lerCorpo(req);
