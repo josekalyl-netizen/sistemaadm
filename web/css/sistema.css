@@ -20,20 +20,26 @@
   display: flex;
   align-items: center;
   gap: 24px;
-  height: 68px;
+  height: 74px;
   flex-wrap: nowrap;
 }
 
-.marca { display: flex; align-items: center; gap: 12px; min-width: 0; }
-/* logo flutuante: PNG com fundo transparente, sem caixa nem borda ao redor */
-.marca-logo { height: 30px; width: auto; display: block; flex-shrink: 0; }
+.marca { display: flex; align-items: center; gap: 14px; min-width: 0; }
+/* Logo flutuante: PNG com fundo transparente, sem caixa nem borda ao redor.
+   42px de altura não é capricho — abaixo disso a linha "CONSULTORIA
+   CORPORATIVA" fica com dois pixels e vira borrão. */
+.marca-logo { height: 42px; width: auto; display: block; flex-shrink: 0; }
 /* a logo é tinta azul-marinho — no tema escuro vira silhueta clara, senão some no fundo quase preto */
 :root[data-tema="escuro"] .marca-logo { filter: brightness(0) invert(1) opacity(.92); }
+/* Filete entre a marca e o nome do sistema: são duas coisas — a empresa e a
+   ferramenta —, e sem a separação viravam uma assinatura só. */
 .marca-nome {
+  padding-left: 14px;
+  border-left: 1px solid rgb(var(--fio));
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .12em;
+  letter-spacing: .1em;
   color: rgb(var(--azul));
   white-space: nowrap;
 }
@@ -538,6 +544,8 @@
   .app { padding: 0 16px 56px; }
   .topo { margin: 0 -16px; padding: 0 16px; }
   .topo-linha { height: auto; padding: 10px 0; flex-wrap: wrap; gap: 12px; }
+  .marca-logo { height: 34px; }
+  .marca-nome { display: none; }   /* no celular o topo é estreito: fica só a marca */
   .seletor-usuario { padding-left: 0; border-left: none; }
   .linha { grid-template-columns: 3px 1fr; }
   .linha-fim { grid-column: 2; padding-top: 0; justify-content: flex-start; }
