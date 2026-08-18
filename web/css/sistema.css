@@ -20,15 +20,18 @@
   display: flex;
   align-items: center;
   gap: 24px;
-  height: 74px;
+  height: 70px;
   flex-wrap: nowrap;
 }
 
 .marca { display: flex; align-items: center; gap: 14px; min-width: 0; }
 /* Logo flutuante: PNG com fundo transparente, sem caixa nem borda ao redor.
-   42px de altura não é capricho — abaixo disso a linha "CONSULTORIA
-   CORPORATIVA" fica com dois pixels e vira borrão. */
-.marca-logo { height: 42px; width: auto; display: block; flex-shrink: 0; }
+   Aqui entra só a assinatura "W3G" (w3g-marca.png), não o logotipo completo:
+   a linha "CONSULTORIA CORPORATIVA" só ficaria legível com a marca perto de
+   100px de altura, e num topo de 70px ela virava um borrão cinza que fazia a
+   marca inteira parecer suja. Recortada, a assinatura ocupa o mesmo espaço e
+   se lê inteira. O logotipo completo continua em w3g-logo.png. */
+.marca-logo { height: 34px; width: auto; display: block; flex-shrink: 0; }
 /* a logo é tinta azul-marinho — no tema escuro vira silhueta clara, senão some no fundo quase preto */
 :root[data-tema="escuro"] .marca-logo { filter: brightness(0) invert(1) opacity(.92); }
 /* Filete entre a marca e o nome do sistema: são duas coisas — a empresa e a
@@ -544,7 +547,7 @@
   .app { padding: 0 16px 56px; }
   .topo { margin: 0 -16px; padding: 0 16px; }
   .topo-linha { height: auto; padding: 10px 0; flex-wrap: wrap; gap: 12px; }
-  .marca-logo { height: 34px; }
+  .marca-logo { height: 28px; }
   .marca-nome { display: none; }   /* no celular o topo é estreito: fica só a marca */
   .seletor-usuario { padding-left: 0; border-left: none; }
   .linha { grid-template-columns: 3px 1fr; }
