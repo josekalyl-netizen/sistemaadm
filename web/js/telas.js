@@ -680,16 +680,32 @@ async function corretores() {
   }
 
   $("#master-corpo").innerHTML = `
-    <div class="secao" style="margin-top:6px">Subir carteira (CSV)</div>
-    <p class="dica" style="margin:0 0 12px">
-      Uma linha por corretor: <span class="mono">corretor,supervisor</span>. Corretor que já existe
-      tem o supervisor atualizado — é assim que se corrige um vínculo errado.
+    <div class="secao" style="margin-top:6px">Subir carteira (Excel)</div>
+    <p class="dica" style="margin:0 0 14px;max-width:640px">
+      Duas colunas: <b>Corretor</b> e <b>Supervisor</b>, uma linha por corretor. Baixe o modelo,
+      preencha e envie de volta. Supervisor que ainda não existe é criado na hora, e corretor
+      que já existe tem o supervisor atualizado — é assim que se corrige um vínculo errado,
+      sem apagar nada. O modelo já sai com a carteira atual dentro${lista.length ? "" : " (hoje, só o cabeçalho)"}.
     </p>
-    <textarea id="csv-corretores" class="campo" style="min-height:110px" placeholder="GUILHERME AUGUSTO,LARISSA&#10;MARISTELA,LUCAS SP"></textarea>
-    <div style="display:flex;gap:10px;align-items:center;margin-top:10px">
-      <input type="file" id="csv-arquivo" accept=".csv,text/csv" class="campo" style="width:auto">
-      <button class="btn btn-cheio btn-mini" id="csv-enviar">Importar</button>
+    <div style="display:flex;gap:26px;align-items:flex-end;flex-wrap:wrap">
+      <div>
+        <div class="rotulo">1 · Baixar</div>
+        <button class="btn btn-mini" id="modelo-baixar">Baixar modelo (.xlsx)</button>
+      </div>
+      <div>
+        <label class="rotulo" for="carteira-arquivo">2 · Enviar preenchido</label>
+        <input type="file" id="carteira-arquivo" accept=".xlsx,.csv,text/csv" class="campo" style="width:auto">
+      </div>
     </div>
+
+    <details style="margin-top:16px">
+      <summary class="rotulo" style="cursor:pointer;margin:0">Colar em texto, sem planilha</summary>
+      <p class="dica" style="margin:10px 0">Uma linha por corretor: <span class="mono">corretor,supervisor</span>.</p>
+      <textarea id="csv-corretores" class="campo" style="min-height:96px" placeholder="GUILHERME AUGUSTO,LARISSA&#10;MARISTELA,LUCAS SP"></textarea>
+      <div style="margin-top:10px">
+        <button class="btn btn-cheio btn-mini" id="csv-enviar">Importar texto</button>
+      </div>
+    </details>
 
     <div style="padding-top:34px">
       <div class="secao">Carteira atual · ${numero(lista.length)} corretores</div>
@@ -700,10 +716,32 @@ async function corretores() {
         </div>`).join("") || listaVazia("Nenhum corretor cadastrado ainda.")}
     </div>`;
 
-  $("#csv-arquivo").addEventListener("change", async (e) => {
+  $("#modelo-baixar").addEventListener("click", async () => {
+    // fetch, e não link direto: o download tem que ir com o cookie do Master
+    const res = await fetch("/api/master/corretores/modelo.xlsx");
+    if (!res.ok) return avisar("Não consegui gerar o modelo.", "erro");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "carteira-corretores.xlsx";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  $("#carteira-arquivo").addEventListener("change", async (e) => {
     const arq = e.target.files?.[0];
     if (!arq) return;
-    $("#csv-corretores").value = await arq.text();
+    try {
+      const r = arq.name.toLowerCase().endsWith(".xlsx")
+        ? await api.master.corretoresXlsx(await comoBase64(arq))
+        : await api.master.corretoresCSV(await arq.text());
+      await recarregarConfig();
+      avisar(resumoDaImportacao(r));
+      redesenhar();
+    } catch (erro) {
+      avisar(erro.message, "erro");
+      e.target.value = "";
+    }
   });
 
   $("#csv-enviar").addEventListener("click", async () => {
@@ -712,10 +750,28 @@ async function corretores() {
     try {
       const r = await api.master.corretoresCSV(csv);
       await recarregarConfig();
-      avisar(`${r.importados} corretor(es) novos · ${r.atualizados} atualizado(s).`);
+      avisar(resumoDaImportacao(r));
       redesenhar();
     } catch (erro) { avisar(erro.message, "erro"); }
   });
+}
+
+/** Lê o arquivo como base64 — é assim que a planilha viaja dentro do JSON. */
+function comoBase64(arquivo) {
+  return new Promise((ok, falhou) => {
+    const leitor = new FileReader();
+    leitor.onload = () => ok(String(leitor.result).split(",")[1] || "");
+    leitor.onerror = () => falhou(new Error("Não consegui ler o arquivo."));
+    leitor.readAsDataURL(arquivo);
+  });
+}
+
+function resumoDaImportacao(r) {
+  const partes = [];
+  if (r.importados) partes.push(`${numero(r.importados)} corretor(es) novos`);
+  if (r.atualizados) partes.push(`${numero(r.atualizados)} com supervisor atualizado`);
+  if (r.ignorados) partes.push(`${numero(r.ignorados)} linha(s) incompletas ignoradas`);
+  return partes.length ? partes.join(" · ") : "Nada mudou: a carteira já estava assim.";
 }
 
 const NOME_TABELA = {

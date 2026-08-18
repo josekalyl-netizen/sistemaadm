@@ -18,7 +18,8 @@ import { contar, zerar } from "./zerar.js";
 import {
   ErroDeUso, alterarUsuario, atribuirAdm, conferirDocumento, config,
   criarProposta, criarUsuario, editarProposta, implantadasPorMes,
-  importarCorretoresCSV, listarCorretores, listarPropostas, listarUsuarios,
+  importarCorretoresCSV, importarCorretoresXlsx, listarCorretores, listarPropostas,
+  listarUsuarios, modeloCorretoresXlsx,
   mudarStatus, obterProposta,
 } from "./api.js";
 import {
@@ -30,6 +31,9 @@ import {
   COOKIE_LIMPO, cookieDeSessao, entrar, sair, senhaMaster, senhaVemDoAmbiente,
   sessaoValida, tokenDoPedido, trocarSenhaMaster,
 } from "./autenticacao.js";
+
+/** Sinal de que a rota já escreveu a resposta na mão (download binário). */
+const RESPOSTA_JA_ENVIADA = Symbol("resposta ja enviada");
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const PASTA_WEB = join(AQUI, "..", "web");
@@ -234,6 +238,26 @@ async function rotaApi(req, res, url) {
       const corpo = await lerCorpo(req);
       return importarCorretoresCSV(db, corpo.csv || "");
     }
+    // A planilha chega em base64 dentro do JSON: evita ter que implementar
+    // multipart só para um arquivo de duas colunas.
+    if (caminho === "/master/corretores/xlsx" && metodo === "POST") {
+      const corpo = await lerCorpo(req);
+      const bytes = Buffer.from(String(corpo.arquivo || ""), "base64");
+      if (!bytes.length) throw new ErroDeUso("Arquivo vazio.");
+      return importarCorretoresXlsx(db, bytes);
+    }
+    // Download binário: sai por fora do responder(), que só sabe mandar JSON.
+    if (caminho === "/master/corretores/modelo.xlsx" && metodo === "GET") {
+      const planilha = modeloCorretoresXlsx(db);
+      res.writeHead(200, {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": 'attachment; filename="carteira-corretores.xlsx"',
+        "Content-Length": planilha.length,
+        "Cache-Control": "no-store",
+      });
+      res.end(planilha);
+      return RESPOSTA_JA_ENVIADA;
+    }
     if (caminho === "/master/conteudo" && metodo === "GET") {
       return { tabelas: contar(db), senha_do_ambiente: senhaVemDoAmbiente() };
     }
@@ -295,6 +319,7 @@ const servidor = createServer(async (req, res) => {
   if (url.pathname.startsWith("/api/")) {
     try {
       const corpo = await rotaApi(req, res, url);
+      if (corpo === RESPOSTA_JA_ENVIADA) return;
       responder(res, res.statusCode === 200 ? 200 : res.statusCode, corpo);
     } catch (erro) {
       if (erro instanceof ErroDeUso) {

@@ -168,6 +168,7 @@ export const api = {
     historico: (f) => pedir(`/api/master/historico?${query(f)}`),
     relatorio: (f) => pedir(`/api/master/relatorio?${query(f)}`),
     corretoresCSV: (csv) => pedir("/api/master/corretores/csv", { method: "POST", corpo: { csv } }),
+    corretoresXlsx: (base64) => pedir("/api/master/corretores/xlsx", { method: "POST", corpo: { arquivo: base64 } }),
     conteudo: () => pedir("/api/master/conteudo"),
     trocarSenha: (atual, nova) => pedir("/api/master/senha", { method: "POST", corpo: { atual, nova } }),
     zerar: (confirmacao) => pedir("/api/master/zerar", { method: "POST", corpo: { confirmacao } }),

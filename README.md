@@ -34,6 +34,26 @@ npm run zerar                           # mostra o que existe, sem apagar
 npm run zerar -- --agora                # deixa o sistema em branco
 ```
 
+### Subir a carteira de corretores (Excel)
+
+Em **Master › Corretores**: baixe o modelo `.xlsx`, preencha e envie de volta.
+Duas colunas — `Corretor` e `Supervisor`, uma linha por corretor. Supervisor que
+ainda não existe é criado na hora; corretor que já existe tem o supervisor
+atualizado, que é como se corrige um vínculo errado sem apagar nada. Reenviar o
+mesmo arquivo não duplica nem muda nada.
+
+O modelo sai preenchido com a carteira atual, então dá para conferir, ajustar e
+acrescentar os novos no fim do mesmo arquivo.
+
+É esse vínculo que faz a proposta nascer com o supervisor certo: no cadastro,
+escolhido o corretor, o supervisor vem junto sozinho.
+
+Colar `corretor,supervisor` em texto continua funcionando, no bloco recolhido
+logo abaixo.
+
+O Excel é lido e escrito por `servidor/xlsx.js`, escrito para este projeto — o
+sistema continua sem dependência nenhuma.
+
 ### Trocar a senha da Área Master
 
 Em **Master › Sistema**, informando a senha atual. Ela fica só na máquina, em
@@ -271,6 +291,7 @@ servidor/importar.js            importação com validação e deduplicação
 servidor/acompanhamento.js      verificações, níveis, fechamento e relatórios
 servidor/mensagens.js           as mensagens de cada etapa (WhatsApp e e-mail)
 servidor/zerar.js               deixa o sistema em branco, mantendo a estrutura
+servidor/xlsx.js                lê e escreve .xlsx, sem dependência
 servidor/autenticacao.js        senha e sessão da Área Master
 servidor/api.js                 consultas e regras de escrita
 servidor/servidor.js            HTTP: serve a interface e a API

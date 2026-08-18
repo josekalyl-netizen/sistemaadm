@@ -14,6 +14,7 @@ import {
   hoje, lerData, lerValor, normalizar, somenteDigitos, texto, validarDocumento, verdadeiro,
 } from "./dominio.js";
 import { preparar, registrarHistorico, supervisorPorNome, usuarioPorNome } from "./banco.js";
+import { gerarXlsx, lerXlsx } from "./xlsx.js";
 import { SQL_DIAS_SEM_VERIFICAR, SQL_NIVEL, verificacoesDaProposta } from "./acompanhamento.js";
 import { textoDeBusca } from "./importar.js";
 
@@ -530,22 +531,35 @@ export function listarCorretores(db) {
 }
 
 /**
- * Importa "corretor,supervisor" (uma linha por corretor; cabeçalho opcional).
- * Só o Master sobe isso. Corretor que já existe tem o supervisor atualizado
- * — é assim que se corrige um vínculo errado, sem apagar nada.
+ * O coração da importação de carteira: pares [corretor, supervisor].
+ *
+ * Corretor que já existe tem o supervisor atualizado — é assim que se corrige
+ * um vínculo errado, sem apagar nada. Supervisor que ainda não existe é criado
+ * na hora (ver supervisorPorNome), então a carteira inteira sobe de uma vez,
+ * sem cadastrar supervisor antes.
+ *
+ * Vincular o corretor ao supervisor aqui é o que faz a proposta nascer com o
+ * supervisor certo depois: no cadastro, o sistema segue esse vínculo sozinho
+ * (ver resolverSupervisor).
  */
-export function importarCorretoresCSV(db, csv) {
-  const linhas = String(csv || "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+function importarCorretores(db, pares) {
   let importados = 0;
   let atualizados = 0;
-  for (const linha of linhas) {
-    const [nomeBruto, supervisorBruto] = linha.split(",");
-    const nome = texto(nomeBruto).toUpperCase();
+  let ignorados = 0;
+
+  for (const [corretorBruto, supervisorBruto] of pares) {
+    const nome = texto(corretorBruto).toUpperCase();
     const nomeSupervisor = texto(supervisorBruto);
-    if (!nome || !nomeSupervisor || nome === "CORRETOR") continue;
+    // cabeçalho da planilha, em qualquer capitalização
+    if (nome === "CORRETOR") continue;
+    if (!nome && !nomeSupervisor) continue;
+    if (!nome || !nomeSupervisor) { ignorados += 1; continue; }
+
     const supervisor = supervisorPorNome(db, nomeSupervisor);
-    const existente = db.prepare("SELECT id FROM corretores WHERE nome = ?").get(nome);
+    const existente = db.prepare("SELECT id, supervisor_id, ativo FROM corretores WHERE nome = ?").get(nome);
     if (existente) {
+      // linha repetida que não muda nada não conta como atualização
+      if (existente.supervisor_id === supervisor.id && existente.ativo === 1) continue;
       db.prepare("UPDATE corretores SET supervisor_id = ?, ativo = 1 WHERE id = ?").run(supervisor.id, existente.id);
       atualizados += 1;
     } else {
@@ -553,10 +567,46 @@ export function importarCorretoresCSV(db, csv) {
       importados += 1;
     }
   }
-  if (!importados && !atualizados) {
-    throw new ErroDeUso('CSV vazio ou fora do formato "corretor,supervisor".');
+
+  if (!importados && !atualizados && !ignorados) {
+    throw new ErroDeUso("Não encontrei nenhuma linha preenchida com corretor e supervisor.");
   }
-  return { importados, atualizados };
+  return { importados, atualizados, ignorados };
+}
+
+/** Importa "corretor,supervisor" em texto (uma linha por corretor). */
+export function importarCorretoresCSV(db, csv) {
+  const pares = String(csv || "")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((l) => l.split(/[,;\t]/));
+  return importarCorretores(db, pares);
+}
+
+/** Importa a mesma coisa vinda de uma planilha .xlsx: coluna A e coluna B. */
+export function importarCorretoresXlsx(db, buffer) {
+  let linhas;
+  try {
+    linhas = lerXlsx(buffer);
+  } catch (erro) {
+    throw new ErroDeUso(`Não consegui ler a planilha: ${erro.message}`);
+  }
+  return importarCorretores(db, linhas.map((l) => [l[0], l[1]]));
+}
+
+/**
+ * Planilha modelo para subir carteira. Quando já existem corretores, o modelo
+ * sai preenchido com a carteira atual: dá para conferir, corrigir um vínculo
+ * e acrescentar os novos no fim, tudo no mesmo arquivo. Reimportar sem mexer
+ * não muda nada.
+ */
+export function modeloCorretoresXlsx(db) {
+  const atuais = listarCorretores(db).map((c) => [c.nome, c.supervisor_nome || ""]);
+  return gerarXlsx([["Corretor", "Supervisor"], ...atuais], {
+    aba: "Corretores",
+    larguras: [38, 30],
+  });
 }
 
 // ------------------------------------------------------------------- config
