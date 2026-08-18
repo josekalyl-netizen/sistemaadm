@@ -62,14 +62,24 @@ def chave(texto):
     return re.sub(r"\s+", " ", sem_acento(str(texto or "")).strip().lower())
 
 
+# Dois supervisores se chamam Lucas: o de São Paulo e o do ABC. O arquivo do
+# primeiro veio nomeado só "LUCAS", mas às vezes aparece como "LUCAS SP" — são a
+# mesma pessoa. Sem este apelido o sistema criaria dois supervisores e a
+# carteira do Lucas de SP ficaria partida em duas.
+APELIDOS = {
+    "LUCAS": "LUCAS SP",
+}
+
+
 def supervisor_do_arquivo(caminho):
     """
     Tira o nome do supervisor do nome do arquivo. Aceita as variações que
     aparecem na prática:
 
         LARISSA_2026.xlsx            -> LARISSA
-        LUCAS ABC 2026.xlsx          -> LUCAS ABC
+        LUCAS 2026.xlsx              -> LUCAS SP   (via APELIDOS)
         Cópia de LUCAS SP 2026.xlsx  -> LUCAS SP
+        LUCAS ABC 2026.xlsx          -> LUCAS ABC
         KATHY 2026 (1).xlsx          -> KATHY
     """
     nome = os.path.basename(caminho)
@@ -78,7 +88,8 @@ def supervisor_do_arquivo(caminho):
     nome = re.sub(r"\s*\(\d+\)\s*$", "", nome)              # "(1)" de cópia do Windows
     nome = re.sub(r"^c[oó]pia\s+(de\s+)?", "", nome, flags=re.I)
     nome = re.sub(r"[\s_-]*20\d\d\s*$", "", nome)           # ano, com espaço ou _
-    return nome.replace("_", " ").strip().upper() or "SEM SUPERVISOR"
+    nome = nome.replace("_", " ").strip().upper() or "SEM SUPERVISOR"
+    return APELIDOS.get(nome, nome)
 
 
 def mes_da_aba(titulo):

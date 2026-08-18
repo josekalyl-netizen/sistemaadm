@@ -3,7 +3,13 @@ Coloque aqui as planilhas .xlsx dos supervisores.
 O nome do arquivo define o supervisor:
 
     LARISSA_2026.xlsx   ->  supervisor LARISSA
-    LUCAS_ABC_2026.xlsx ->  supervisor LUCAS ABC
+    LUCAS ABC 2026.xlsx ->  supervisor LUCAS ABC
+    LUCAS 2026.xlsx     ->  supervisor LUCAS SP
+
+O arquivo "LUCAS" é o do Lucas de São Paulo. Como ele às vezes chega
+nomeado "LUCAS SP", os dois nomes caem no mesmo supervisor (a lista
+APELIDOS em scripts/planilha_para_json.py) — senão a carteira dele
+ficaria partida em dois supervisores diferentes.
 
 Depois é só rodar, na pasta do projeto:
 
