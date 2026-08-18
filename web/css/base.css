@@ -291,7 +291,11 @@ td {
   border-bottom: 1px solid rgb(var(--fio2));
   vertical-align: middle;
 }
-th.num, td.num { text-align: right; padding-right: 0; font-variant-numeric: tabular-nums; }
+/* A coluna numérica cola na régua da direita — por isso padding-right: 0.
+   Só que, no meio da tabela, isso encostava o número na coluna seguinte e
+   "0" + "ativa" viravam "0ativa": no meio, o respiro volta. */
+th.num, td.num { text-align: right; padding-right: 0; padding-left: 18px; font-variant-numeric: tabular-nums; }
+th.num:not(:last-child), td.num:not(:last-child) { padding-right: 18px; }
 tbody tr:hover td { background: rgb(var(--fio2) / .6); }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }

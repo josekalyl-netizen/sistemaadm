@@ -44,6 +44,22 @@ A equipe de supervisão vem cadastrada com o sistema (`SUPERVISORES_PADRAO`, em
 `servidor/banco.js`) e é recriada sempre que não existe supervisor nenhum,
 inclusive logo depois de zerar.
 
+### Excluir usuário, corretor ou supervisor
+
+Em **Master › Corretores** (o × em cada linha) e **Master › Usuários** (botão
+*excluir*). A regra é a mesma nos três casos:
+
+- nada depende dele → é apagado de vez;
+- alguma proposta depende → é **desativado**, sai das listas de hoje e continua
+  no histórico. Apagar de verdade deixaria relatório com proposta sem
+  responsável, ou proposta sem corretor.
+
+Supervisor com corretor na carteira não é excluído: passe os corretores para
+outro supervisor antes. Corretor órfão não existe — se existisse, o vínculo se
+perderia em silêncio e a próxima proposta viria sem supervisor.
+
+Quem foi desativado aparece riscado, com a opção de reativar.
+
 ### Subir a carteira de corretores (Excel)
 
 Em **Master › Corretores**: baixe o modelo `.xlsx`, preencha e envie de volta.

@@ -572,3 +572,65 @@ th:first-child, td:first-child { padding-left: 20px; }
 th:last-child,  td:last-child  { padding-right: 20px; }
 th { padding-top: 16px; }
 tbody tr:last-child td { border-bottom: none; }
+
+/* ------------------------------------------------- carteiras (Master) */
+/* Uma carteira por cartão. Antes era tudo numa linha de nomes separados por
+   ponto, e com trinta corretores virava um parágrafo ilegível. */
+.carteiras {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.cartao-carteira { overflow: hidden; }
+.cartao-carteira.desativado { opacity: .55; }
+.cartao-topo {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgb(var(--fio));
+  background: rgb(var(--superficie2));
+}
+.cartao-nome {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: rgb(var(--azul));
+  letter-spacing: .01em;
+  overflow-wrap: anywhere;
+}
+.cartao-meta { font-size: 11.5px; color: rgb(var(--apagado)); margin-top: 2px; }
+.cartao-lista { padding: 4px 0; max-height: 320px; overflow-y: auto; }
+
+.item-carteira {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  font-size: 13px;
+}
+.item-carteira + .item-carteira { border-top: 1px solid rgb(var(--fio2)); }
+.item-carteira.desativado .item-nome { text-decoration: line-through; color: rgb(var(--apagado)); }
+.item-carteira.vazio { color: rgb(var(--apagado)); font-style: italic; }
+.item-nome { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.item-meta { font-size: 11px; color: rgb(var(--apagado)); white-space: nowrap; }
+
+/* O × só aparece com o ponteiro em cima da linha: excluir não é ação de
+   olhar, é de procurar — e trinta cruzinhas vermelhas não são uma carteira. */
+.botao-x {
+  flex-shrink: 0;
+  width: 22px; height: 22px; line-height: 1;
+  display: grid; place-items: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: rgb(var(--apagado));
+  font-size: 17px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .12s, background .12s, color .12s;
+}
+.item-carteira:hover .botao-x,
+.cartao-topo:hover .botao-x,
+.botao-x:focus-visible { opacity: 1; }
+.botao-x:hover { background: rgb(var(--alerta) / .12); color: rgb(var(--alerta)); }

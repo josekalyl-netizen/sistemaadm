@@ -16,10 +16,11 @@ import { abrirBanco } from "./banco.js";
 import { prepararSePreciso } from "./preparar.js";
 import { contar, zerar } from "./zerar.js";
 import {
-  ErroDeUso, alterarUsuario, atribuirAdm, conferirDocumento, config,
-  criarCorretor, criarProposta, criarUsuario, editarProposta, implantadasPorMes,
+  ErroDeUso, alterarUsuario, atribuirAdm, carteira, conferirDocumento, config,
+  criarCorretor, criarProposta, criarSupervisor, criarUsuario, editarProposta,
+  excluirCorretor, excluirSupervisor, excluirUsuario, implantadasPorMes,
   importarCorretoresCSV, importarCorretoresXlsx, listarCorretores, listarPropostas,
-  listarUsuarios, modeloCorretoresXlsx, mudarStatus, obterProposta,
+  listarUsuarios, modeloCorretoresXlsx, mudarStatus, obterProposta, reativar,
 } from "./api.js";
 import {
   fecharDiasPassados, historicoDiario, porUsuario, relatorio, situacaoAtual,
@@ -232,6 +233,20 @@ async function rotaApi(req, res, url) {
     }
     if ((m = caminho.match(/^\/master\/usuarios\/(\d+)$/)) && metodo === "PATCH") {
       return alterarUsuario(db, m[1], await lerCorpo(req));
+    }
+    if (caminho === "/master/carteira" && metodo === "GET") {
+      return { carteira: carteira(db) };
+    }
+    if (caminho === "/master/supervisores" && metodo === "POST") {
+      res.statusCode = 201;
+      return criarSupervisor(db, await lerCorpo(req));
+    }
+    if ((m = caminho.match(/^\/master\/(usuarios|corretores|supervisores)\/(\d+)$/)) && metodo === "DELETE") {
+      const excluir = { usuarios: excluirUsuario, corretores: excluirCorretor, supervisores: excluirSupervisor };
+      return excluir[m[1]](db, m[2]);
+    }
+    if ((m = caminho.match(/^\/master\/(usuarios|corretores|supervisores)\/(\d+)\/reativar$/)) && metodo === "POST") {
+      return reativar(db, m[1], m[2]);
     }
     if (caminho === "/master/corretores" && metodo === "POST") {
       res.statusCode = 201;

@@ -600,6 +600,115 @@ export function criarCorretor(db, entrada) {
   return { nome, supervisor: supervisor.nome, atualizado: false };
 }
 
+/**
+ * A carteira inteira, agrupada por supervisor — é o que a tela do Master
+ * desenha. Traz também os desativados, para não sumirem sem explicação, e a
+ * contagem de propostas de cada um, que é o que decide se dá para excluir.
+ */
+export function carteira(db) {
+  const supervisores = db.prepare(`
+    SELECT s.id, s.nome, s.ativo,
+           (SELECT COUNT(*) FROM propostas p WHERE p.supervisor_id = s.id) AS propostas
+    FROM supervisores s ORDER BY s.ativo DESC, s.nome
+  `).all();
+
+  const corretores = db.prepare(`
+    SELECT c.id, c.nome, c.ativo, c.supervisor_id,
+           (SELECT COUNT(*) FROM propostas p WHERE p.corretor = c.nome) AS propostas
+    FROM corretores c ORDER BY c.ativo DESC, c.nome
+  `).all();
+
+  return supervisores.map((s) => ({
+    ...s,
+    corretores: corretores.filter((c) => c.supervisor_id === s.id),
+  })).concat(
+    corretores.some((c) => !c.supervisor_id)
+      ? [{ id: null, nome: "Sem supervisor", ativo: 1, propostas: 0,
+           corretores: corretores.filter((c) => !c.supervisor_id) }]
+      : [],
+  );
+}
+
+export function criarSupervisor(db, entrada) {
+  const nome = texto(entrada.nome).toUpperCase();
+  if (!nome) throw new ErroDeUso("Informe o nome do supervisor.");
+  const existente = db.prepare("SELECT id, ativo FROM supervisores WHERE nome = ?").get(nome);
+  if (existente) {
+    if (existente.ativo) throw new ErroDeUso(`${nome} já está cadastrado.`);
+    db.prepare("UPDATE supervisores SET ativo = 1 WHERE id = ?").run(existente.id);
+    return { nome, reativado: true };
+  }
+  db.prepare("INSERT INTO supervisores (nome) VALUES (?)").run(nome);
+  return { nome, reativado: false };
+}
+
+/**
+ * Excluir, nas três tabelas, segue uma regra só: some de vez quando nada
+ * depende dele; quando alguma proposta depende, é desativado.
+ *
+ * Apagar de verdade quem já aparece em proposta antiga deixaria o histórico
+ * mentindo — relatório sem responsável, proposta sem corretor. Desativar tira
+ * a pessoa das listas de hoje e preserva o que já aconteceu.
+ */
+function excluirOuDesativar(db, tabela, id, propostas, rotulo) {
+  const linha = db.prepare(`SELECT id, nome, ativo FROM ${tabela} WHERE id = ?`).get(Number(id));
+  if (!linha) throw new ErroDeUso(`${rotulo} não encontrado.`, 404);
+
+  if (propostas > 0) {
+    if (!linha.ativo) throw new ErroDeUso(`${linha.nome} já está desativado, e não dá para apagar: aparece em ${propostas} proposta${propostas === 1 ? "" : "s"}.`);
+    db.prepare(`UPDATE ${tabela} SET ativo = 0 WHERE id = ?`).run(linha.id);
+    return { nome: linha.nome, desativado: true, propostas };
+  }
+
+  db.prepare(`DELETE FROM ${tabela} WHERE id = ?`).run(linha.id);
+  return { nome: linha.nome, desativado: false, propostas: 0 };
+}
+
+export function excluirUsuario(db, id) {
+  const usuario = db.prepare("SELECT * FROM usuarios WHERE id = ?").get(Number(id));
+  if (!usuario) throw new ErroDeUso("Usuário não encontrado.", 404);
+  if (usuario.papel === "master") throw new ErroDeUso("O usuário Master não pode ser excluído.");
+  const n = db.prepare("SELECT COUNT(*) AS n FROM propostas WHERE usuario_id = ?").get(usuario.id).n;
+  return excluirOuDesativar(db, "usuarios", usuario.id, n, "Usuário");
+}
+
+export function excluirCorretor(db, id) {
+  const corretor = db.prepare("SELECT * FROM corretores WHERE id = ?").get(Number(id));
+  if (!corretor) throw new ErroDeUso("Corretor não encontrado.", 404);
+  const n = db.prepare("SELECT COUNT(*) AS n FROM propostas WHERE corretor = ?").get(corretor.nome).n;
+  return excluirOuDesativar(db, "corretores", corretor.id, n, "Corretor");
+}
+
+export function excluirSupervisor(db, id) {
+  const supervisor = db.prepare("SELECT * FROM supervisores WHERE id = ?").get(Number(id));
+  if (!supervisor) throw new ErroDeUso("Supervisor não encontrado.", 404);
+
+  // Corretor órfão não existe: ou se move a carteira antes, ou o vínculo se
+  // perderia em silêncio e o supervisor da próxima proposta viria vazio.
+  const naCarteira = db.prepare("SELECT COUNT(*) AS n FROM corretores WHERE supervisor_id = ? AND ativo = 1")
+    .get(supervisor.id).n;
+  if (naCarteira > 0) {
+    throw new ErroDeUso(
+      `${supervisor.nome} ainda tem ${naCarteira} corretor${naCarteira === 1 ? "" : "es"} na carteira. ` +
+      "Passe esses corretores para outro supervisor antes de excluir.",
+    );
+  }
+
+  const n = db.prepare("SELECT COUNT(*) AS n FROM propostas WHERE supervisor_id = ?").get(supervisor.id).n;
+  return excluirOuDesativar(db, "supervisores", supervisor.id, n, "Supervisor");
+}
+
+/** Volta alguém desativado para as listas de hoje. */
+export function reativar(db, tabela, id) {
+  if (!["usuarios", "corretores", "supervisores"].includes(tabela)) {
+    throw new ErroDeUso("Tabela inválida.");
+  }
+  const linha = db.prepare(`SELECT id, nome FROM ${tabela} WHERE id = ?`).get(Number(id));
+  if (!linha) throw new ErroDeUso("Não encontrado.", 404);
+  db.prepare(`UPDATE ${tabela} SET ativo = 1 WHERE id = ?`).run(linha.id);
+  return { nome: linha.nome };
+}
+
 /** Importa "corretor,supervisor" em texto (uma linha por corretor). */
 export function importarCorretoresCSV(db, csv) {
   const pares = String(csv || "")

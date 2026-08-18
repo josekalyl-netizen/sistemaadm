@@ -636,16 +636,21 @@ async function usuarios() {
             <td class="num">${numero(u.total)}</td>
             <td class="num">${numero(u.abertas)}</td>
             <td class="${u.ativo ? "" : "apagado"}">${u.ativo ? "ativa" : "desativada"}</td>
-            <td class="num">
+            <td class="num" style="white-space:nowrap">
               <button class="btn btn-mini" data-alternar="${u.id}" data-ativo="${u.ativo}">
                 ${u.ativo ? "desativar" : "reativar"}
-              </button></td>
+              </button>
+              ${u.papel === "master" ? "" : `
+                <button class="btn btn-perigo btn-mini" data-excluir-usuario="${u.id}"
+                        data-nome="${esc(u.nome)}" style="margin-left:6px">excluir</button>`}
+            </td>
           </tr>`).join("")}
       </tbody>
     </table>
-    <p class="dica" style="margin-top:16px">
-      Só o Master cadastra e desativa usuários. Desativar não apaga nada: a ADM sai do
-      seletor, mas continua no histórico e nos relatórios.
+    <p class="dica" style="margin-top:16px;max-width:640px">
+      Só o Master mexe aqui. <b>Desativar</b> tira a ADM do seletor e mantém tudo no
+      histórico. <b>Excluir</b> apaga de vez quem nunca pegou proposta; quem já pegou é
+      desativado no lugar, senão o relatório ficaria com proposta sem responsável.
     </p>`;
 
   $("#add-usuario").addEventListener("click", async () => {
@@ -666,23 +671,59 @@ async function usuarios() {
       redesenhar();
     } catch (erro) { avisar(erro.message, "erro"); }
   }));
+
+  $$("[data-excluir-usuario]").forEach((b) => b.addEventListener("click", async () => {
+    if (!confirm(`Excluir a usuária ${b.dataset.nome}?`)) return;
+    try {
+      const r = await api.master.excluir("usuarios", b.dataset.excluirUsuario);
+      await recarregarConfig();
+      avisar(r.desativado
+        ? `${r.nome} foi desativada: responde por ${numero(r.propostas)} proposta(s), então o histórico fica de pé.`
+        : `${r.nome} excluída.`);
+      redesenhar();
+    } catch (erro) { avisar(erro.message, "erro"); }
+  }));
 }
 
 // -------------------------------------------------------- 5d. Corretores
 
 async function corretores() {
-  const lista = estado.config.corretores_cadastro || [];
-  const supervisores = estado.config.supervisores || [];
-  const porSupervisor = new Map();
-  for (const c of lista) {
-    const chave = c.supervisor_nome || "sem supervisor";
-    if (!porSupervisor.has(chave)) porSupervisor.set(chave, []);
-    porSupervisor.get(chave).push(c);
-  }
+  const { carteira } = await api.master.carteira();
+  const supervisores = (estado.config.supervisores || []);
+  const ativos = carteira.reduce((n, s) => n + s.corretores.filter((c) => c.ativo).length, 0);
+
+  const linhaCorretor = (c) => `
+    <div class="item-carteira ${c.ativo ? "" : "desativado"}">
+      <span class="item-nome">${esc(c.nome)}</span>
+      ${c.propostas ? `<span class="item-meta">${numero(c.propostas)} proposta${c.propostas === 1 ? "" : "s"}</span>` : ""}
+      ${c.ativo
+        ? `<button class="botao-x" title="Excluir corretor" data-excluir="corretores" data-id="${c.id}" data-nome="${esc(c.nome)}">×</button>`
+        : `<button class="btn btn-mini" data-reativar="corretores" data-id="${c.id}">reativar</button>`}
+    </div>`;
+
+  const cartao = (s) => `
+    <div class="bloco cartao-carteira ${s.ativo ? "" : "desativado"}">
+      <div class="cartao-topo">
+        <div style="min-width:0">
+          <div class="cartao-nome">${esc(s.nome)}</div>
+          <div class="cartao-meta">
+            ${numero(s.corretores.filter((c) => c.ativo).length)} corretor(es)${s.propostas ? ` · ${numero(s.propostas)} proposta(s)` : ""}
+          </div>
+        </div>
+        ${s.id === null ? "" : s.ativo
+          ? `<button class="botao-x" title="Excluir supervisor" data-excluir="supervisores" data-id="${s.id}" data-nome="${esc(s.nome)}">×</button>`
+          : `<button class="btn btn-mini" data-reativar="supervisores" data-id="${s.id}">reativar</button>`}
+      </div>
+      <div class="cartao-lista">
+        ${s.corretores.length
+          ? s.corretores.map(linhaCorretor).join("")
+          : `<div class="item-carteira vazio">nenhum corretor</div>`}
+      </div>
+    </div>`;
 
   $("#master-corpo").innerHTML = `
-    <div class="secao" style="margin-top:6px">Cadastrar um corretor</div>
-    <div class="grade" style="max-width:640px">
+    <div class="secao" style="margin-top:6px">Cadastrar</div>
+    <div class="grade" style="max-width:700px">
       <div>
         <label class="rotulo" for="novo-corretor">Nome do corretor</label>
         <input id="novo-corretor" class="campo" placeholder="nome completo" autocomplete="off">
@@ -695,16 +736,22 @@ async function corretores() {
         </select>
       </div>
     </div>
-    <div style="margin-top:14px">
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-cheio btn-mini" id="novo-corretor-salvar">Cadastrar corretor</button>
+      <span class="apagado" style="font-size:12px">ou</span>
+      <input id="nova-supervisao" class="campo" placeholder="novo supervisor" style="width:200px" autocomplete="off">
+      <button class="btn btn-mini" id="nova-supervisao-salvar">Cadastrar supervisor</button>
     </div>
+
+    <div class="secao" style="margin-top:34px">Carteiras · ${numero(ativos)} corretores</div>
+    <div class="carteiras">${carteira.map(cartao).join("") || listaVazia("Nenhum supervisor cadastrado.")}</div>
 
     <div class="secao" style="margin-top:34px">Subir carteira (Excel)</div>
     <p class="dica" style="margin:0 0 14px;max-width:640px">
       Duas colunas: <b>Corretor</b> e <b>Supervisor</b>, uma linha por corretor. Baixe o modelo,
       preencha e envie de volta. Supervisor que ainda não existe é criado na hora, e corretor
       que já existe tem o supervisor atualizado — é assim que se corrige um vínculo errado,
-      sem apagar nada. O modelo já sai com a carteira atual dentro${lista.length ? "" : " (hoje, só o cabeçalho)"}.
+      sem apagar nada. O modelo já sai com a carteira atual dentro.
     </p>
     <div style="display:flex;gap:26px;align-items:flex-end;flex-wrap:wrap">
       <div>
@@ -724,16 +771,7 @@ async function corretores() {
       <div style="margin-top:10px">
         <button class="btn btn-cheio btn-mini" id="csv-enviar">Importar texto</button>
       </div>
-    </details>
-
-    <div style="padding-top:34px">
-      <div class="secao">Carteira atual · ${numero(lista.length)} corretores</div>
-      ${[...porSupervisor.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([sup, corr]) => `
-        <div style="margin-bottom:22px">
-          <div class="rotulo">${esc(sup)} · ${corr.length}</div>
-          <div class="linha-meta" style="font-size:12.5px">${corr.map((c) => esc(c.nome)).join(" · ")}</div>
-        </div>`).join("") || listaVazia("Nenhum corretor cadastrado ainda.")}
-    </div>`;
+    </details>`;
 
   $("#novo-corretor-salvar").addEventListener("click", async () => {
     const nome = $("#novo-corretor").value.trim();
@@ -747,6 +785,38 @@ async function corretores() {
       redesenhar();
     } catch (erro) { avisar(erro.message, "erro"); }
   });
+
+  $("#nova-supervisao-salvar").addEventListener("click", async () => {
+    const nome = $("#nova-supervisao").value.trim();
+    try {
+      const r = await api.master.criarSupervisor(nome);
+      await recarregarConfig();
+      avisar(r.reativado ? `${r.nome} reativado.` : `${r.nome} cadastrado.`);
+      redesenhar();
+    } catch (erro) { avisar(erro.message, "erro"); }
+  });
+
+  $$("[data-excluir]").forEach((b) => b.addEventListener("click", async () => {
+    const oQue = b.dataset.excluir === "supervisores" ? "o supervisor" : "o corretor";
+    if (!confirm(`Excluir ${oQue} ${b.dataset.nome}?`)) return;
+    try {
+      const r = await api.master.excluir(b.dataset.excluir, b.dataset.id);
+      await recarregarConfig();
+      avisar(r.desativado
+        ? `${r.nome} foi desativado: aparece em ${numero(r.propostas)} proposta(s), então o histórico fica de pé.`
+        : `${r.nome} excluído.`);
+      redesenhar();
+    } catch (erro) { avisar(erro.message, "erro"); }
+  }));
+
+  $$("[data-reativar]").forEach((b) => b.addEventListener("click", async () => {
+    try {
+      const r = await api.master.reativar(b.dataset.reativar, b.dataset.id);
+      await recarregarConfig();
+      avisar(`${r.nome} reativado.`);
+      redesenhar();
+    } catch (erro) { avisar(erro.message, "erro"); }
+  }));
 
   $("#modelo-baixar").addEventListener("click", async () => {
     // fetch, e não link direto: o download tem que ir com o cookie do Master
