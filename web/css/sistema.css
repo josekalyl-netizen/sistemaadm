@@ -114,11 +114,72 @@
   border-right: 1px solid rgb(var(--fio));
   border-bottom: 1px solid rgb(var(--fio));
   background: rgb(var(--superficie));
+  /* Coluna com o rótulo em cima e o número embaixo: quando um rótulo quebra em
+     duas linhas ("IMPLANTADO NO MÊS"), é o espaço do meio que estica — os
+     números continuam todos na mesma altura, lado a lado. */
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
-.numero-bloco .rotulo { margin: 0 0 10px; }
+.numero-bloco .rotulo { margin: 0 0 auto; padding-bottom: 10px; }
 .numero-bloco.destaque .numero { color: rgb(var(--alerta)); }
 .numero-bloco.acionavel { cursor: pointer; transition: background .15s; }
 .numero-bloco.acionavel:hover { background: rgb(var(--fio2)); }
+
+/* Cartões de dinheiro: "R$ 2.288.804,06" é muito mais largo que "865", então a
+   coluna é maior e o corpo do número é menor — senão o valor vaza por cima da
+   borda do cartão vizinho. */
+/* Número de colunas fixo por faixa de tela: com `auto-fit` os oito cartões do
+   cenário caíam 7 + 1, deixando uma fileira quase vazia. Em 4 + 4 o quadro
+   fecha certo. */
+.numeros.valores { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1080px) { .numeros.valores { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 820px)  { .numeros.valores { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px)  { .numeros.valores { grid-template-columns: minmax(0, 1fr); } }
+
+/* Grade de poucos cartões (anos e meses das Implantadas): com `auto-fit` dois
+   anos viravam dois blocos de meia tela cada. Com `auto-fill` os cartões ficam
+   do tamanho certo e a fileira não estica; a borda sai do container e vai para
+   cada cartão, para não sobrar um fio atravessando o vazio. */
+.numeros.compacta {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  border: none;
+}
+.numeros.compacta .numero-bloco {
+  border: 1px solid rgb(var(--fio));
+  margin: 0 -1px -1px 0;
+}
+
+/* O total em acompanhamento é a manchete do painel: uma faixa só dele, em vez
+   de um cartão solto numa grade de quatro colunas. */
+.faixa-valor {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 20px;
+  border: 1px solid rgb(var(--fio));
+  background: rgb(var(--superficie));
+}
+.faixa-valor .numero {
+  font-size: 32px;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  color: rgb(var(--alerta));
+}
+.faixa-valor .apoio { font-size: 12px; color: rgb(var(--apagado)); font-variant-numeric: tabular-nums; }
+.faixa-valor .rotulo { margin: 0; }
+.numero.dinheiro {
+  font-size: 19px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.numero-bloco .apoio {
+  margin-top: 5px;
+  font-size: 11px;
+  color: rgb(var(--apagado));
+  font-variant-numeric: tabular-nums;
+}
 
 /* ------------------------------------------------------------------ etapas */
 .etapas { display: flex; flex-wrap: wrap; gap: 0; border-top: 1px solid rgb(var(--fio)); }
@@ -184,9 +245,40 @@
 .linha:hover { background: rgb(var(--cor) / var(--tinta-etapa)); }
 .linha-cor { align-self: stretch; background: rgb(var(--cor)); opacity: .75; }
 .linha-corpo { padding: 13px 0; min-width: 0; }
+/* Colunas de largura fixa, não flex: assim o nível, o valor em R$ e o botão
+   ficam um debaixo do outro em TODAS as linhas — inclusive nas encerradas, que
+   não têm nível nem botão e antes empurravam o valor para fora da coluna. */
 .linha-fim {
-  padding: 13px 0; display: flex; align-items: center; gap: 18px;
-  justify-content: flex-end; text-align: right;
+  padding: 13px 0;
+  display: grid;
+  grid-template-columns: 108px 118px 100px;
+  align-items: center;
+  gap: 0 16px;
+  text-align: right;
+}
+.linhas.sem-botao .linha-fim { grid-template-columns: 108px 118px; }
+.linhas.so-valor .linha-fim  { grid-template-columns: 118px; }
+.linha-fim .nivel { justify-content: flex-end; }
+.linha-fim .btn-verificar { width: 100%; }
+
+/* Tela estreita: as três colunas fixas (326px) não cabem ao lado do nome, e o
+   valor era cortado fora da tela. Aqui o fim desce para a linha de baixo. */
+@media (max-width: 700px) {
+  .linha { grid-template-columns: 3px 1fr; }
+  .linha-corpo { padding-bottom: 6px; }
+  .linha-fim,
+  .linhas.sem-botao .linha-fim,
+  .linhas.so-valor .linha-fim {
+    grid-column: 2;
+    grid-template-columns: auto auto auto;
+    justify-content: start;
+    justify-items: start;
+    text-align: left;
+    padding: 0 0 13px;
+    gap: 0 14px;
+  }
+  .linha-fim .nivel { justify-content: flex-start; }
+  .linha-fim .btn-verificar { width: auto; }
 }
 
 .linha-nome {
@@ -197,7 +289,7 @@
   display: flex; gap: 14px; flex-wrap: wrap;
   font-size: 11.5px; color: rgb(var(--apagado)); margin-top: 3px;
 }
-.linha-valor { font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.linha-valor { font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
 
 /* nível de acompanhamento */
 .nivel { font-size: 11px; letter-spacing: .02em; white-space: nowrap; display: inline-flex; gap: 5px; align-items: center; }

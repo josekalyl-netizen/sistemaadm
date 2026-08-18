@@ -19,7 +19,15 @@ export function textoNivel(p) {
   return `há ${d} dias`;
 }
 
-export function linhaProposta(p, { comVerificar = true } = {}) {
+/**
+ * `modo` diz quantas colunas o fim da linha tem — e as colunas vazias PRECISAM
+ * ser desenhadas, senão o valor em R$ escorrega para a coluna do nível e a
+ * lista fica com os valores desalinhados de linha para linha.
+ *   completo  · nível | valor | botão
+ *   sem-botao · nível | valor
+ *   so-valor  · valor
+ */
+export function linhaProposta(p, { comVerificar = true, modo = "completo" } = {}) {
   const et = etapaDe(p.status_atual);
   const niv = nivelDe(p.nivel);
   const precisa = p.nivel !== "encerrada";
@@ -40,11 +48,14 @@ export function linhaProposta(p, { comVerificar = true } = {}) {
       </div>
     </div>
     <div class="linha-fim">
-      ${precisa ? `<span class="nivel nivel-${p.nivel}">${niv.sinal} ${esc(textoNivel(p))}</span>` : ""}
+      ${modo === "so-valor" ? "" : (precisa
+        ? `<span class="nivel nivel-${p.nivel}">${niv.sinal} ${esc(textoNivel(p))}</span>`
+        : "<span></span>")}
       <span class="linha-valor">${moeda(p.valor)}</span>
-      ${comVerificar && precisa ? `
-        <button class="btn-verificar ${jaHoje ? "feito" : ""}" data-verificar="${p.id}"
-                ${jaHoje ? "disabled" : ""}>${jaHoje ? "✓ verificada" : "Verificar"}</button>` : ""}
+      ${modo !== "completo" ? "" : (comVerificar && precisa
+        ? `<button class="btn-verificar ${jaHoje ? "feito" : ""}" data-verificar="${p.id}"
+                ${jaHoje ? "disabled" : ""}>${jaHoje ? "✓ verificada" : "Verificar"}</button>`
+        : "<span></span>")}
     </div>
   </div>`;
 }
@@ -57,8 +68,14 @@ export function listaVazia(mensagem) {
 export function montarLista(alvo, resultado, opcoes = {}) {
   const { vazio = "Nenhuma proposta encontrada.", comVerificar = true } = opcoes;
 
+  // Sem botão de verificar e com tudo encerrado (Implantadas), só sobra o valor:
+  // a linha encolhe para uma coluna em vez de deixar dois vãos mortos à direita.
+  const todasEncerradas = resultado.itens.every((p) => p.nivel === "encerrada");
+  const modo = comVerificar ? "completo" : (todasEncerradas ? "so-valor" : "sem-botao");
+
   alvo.innerHTML = resultado.itens.length
-    ? `<div class="linhas">${resultado.itens.map((p) => linhaProposta(p, { comVerificar })).join("")}</div>`
+    ? `<div class="linhas ${modo === "completo" ? "" : modo}">${
+        resultado.itens.map((p) => linhaProposta(p, { comVerificar, modo })).join("")}</div>`
       + paginacao(resultado)
     : listaVazia(vazio);
 

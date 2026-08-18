@@ -49,8 +49,8 @@ async function propostas() {
   const blocoValor = (rotulo, obj, destaque = false) => `
     <div class="numero-bloco ${destaque ? "destaque" : ""}">
       <span class="rotulo">${esc(rotulo)}</span>
-      <div class="numero" style="font-size:22px">${moeda(obj?.total ?? 0)}</div>
-      <div class="dica" style="margin-top:4px">${numero(obj?.quantidade ?? 0)} proposta${(obj?.quantidade ?? 0) === 1 ? "" : "s"}</div>
+      <div class="numero dinheiro">${moeda(obj?.total ?? 0)}</div>
+      <div class="apoio">${numero(obj?.quantidade ?? 0)} proposta${(obj?.quantidade ?? 0) === 1 ? "" : "s"}</div>
     </div>`;
 
   const opcoes = (valores, atual, rotulo = (v) => v, valor = (v) => v) =>
@@ -82,14 +82,16 @@ async function propostas() {
 
     <div style="padding-top:34px">
       <div class="secao">Em acompanhamento (R$)</div>
-      <div class="numeros">
-        ${blocoValor("Para acompanhar hoje", p.valores?.para_acompanhar, true)}
+      <div class="faixa-valor">
+        <span class="rotulo">Para acompanhar hoje</span>
+        <span class="numero">${moeda(p.valores?.para_acompanhar?.total ?? 0)}</span>
+        <span class="apoio">em ${numero(p.valores?.para_acompanhar?.quantidade ?? 0)} proposta${(p.valores?.para_acompanhar?.quantidade ?? 0) === 1 ? " aberta" : "s abertas"}</span>
       </div>
     </div>
 
     <div style="padding-top:34px">
       <div class="secao">Cenário do mês</div>
-      <div class="numeros">
+      <div class="numeros valores">
         ${blocoValor("Para acompanhar hoje", p.valores?.para_acompanhar)}
         ${blocoValor("Em análise", p.valores?.em_analise)}
         ${blocoValor("Cotação", p.valores?.cotacao)}
@@ -302,12 +304,12 @@ function implantadasAnos(meses) {
 
   alvo().innerHTML = `
     ${cabecalhoTela("Implantadas", `${numero(total)} propostas concluídas · escolha o ano`)}
-    <div class="numeros">
+    <div class="numeros compacta">
       ${anos.map((a) => `
         <button class="numero-bloco acionavel" data-ano="${a.ano}" style="text-align:left;border:none;cursor:pointer">
           <span class="rotulo">${esc(a.ano)}</span>
           <div class="numero">${numero(a.quantidade)}</div>
-          <div class="dica" style="margin-top:4px">${moeda(a.valor)}</div>
+          <div class="apoio">${moeda(a.valor)}</div>
         </button>`).join("")}
     </div>`;
 
@@ -323,12 +325,12 @@ function implantadasMeses(meses) {
 
   alvo().innerHTML = `
     ${cabecalhoTela("Implantadas", `${implAno} · ${numero(total)} propostas · escolha o mês`, voltarLink("todos os anos"))}
-    <div class="numeros">
+    <div class="numeros compacta">
       ${doAno.map((m) => `
         <button class="numero-bloco acionavel" data-mes="${m.mes}" style="text-align:left;border:none;cursor:pointer">
           <span class="rotulo">${esc(MESES[Number(m.mes) - 1] || m.mes)}</span>
           <div class="numero">${numero(m.quantidade)}</div>
-          <div class="dica" style="margin-top:4px">${moeda(m.valor)}</div>
+          <div class="apoio">${moeda(m.valor)}</div>
         </button>`).join("")}
     </div>`;
 

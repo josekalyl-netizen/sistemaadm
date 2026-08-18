@@ -302,6 +302,11 @@ function abrirNavegador(endereco) {
     : process.platform === "win32" ? "cmd" : "xdg-open";
   const args = process.platform === "win32" ? ["/c", "start", "", endereco] : [endereco];
   try {
-    spawn(comando, args, { stdio: "ignore", detached: true }).unref();
+    const filho = spawn(comando, args, { stdio: "ignore", detached: true });
+    // Sem o listener, um "spawn ENOENT" (Linux sem xdg-open) vira 'error' não
+    // tratado e DERRUBA o servidor inteiro — o try/catch não pega, porque o
+    // erro chega depois, de forma assíncrona.
+    filho.on("error", () => {});
+    filho.unref();
   } catch { /* sem navegador: o usuário abre na mão */ }
 }

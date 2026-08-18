@@ -83,20 +83,21 @@ Etapas encerradas (Implantada, Cancelada) saem da fila — não têm prazo.
 
 ### 4 · Comunicação
 
-São **15 mensagens prontas por etapa** (120 no total), escritas para soarem
-humanas. O sistema escolhe uma sozinho e **não repete a mesma para o mesmo
-corretor** enquanto houver outra disponível.
+Mensagens prontas para a ADM copiar e mandar para o corretor. O número de
+variações muda por etapa — Em análise tem 10; Pendente e Cancelada, 3; Em
+implantação, 2; as demais têm a mensagem-padrão da etapa. O sistema escolhe uma
+sozinho e **não repete a mesma para o mesmo corretor** enquanto houver outra
+disponível.
 
 Na etapa Pendente existe um campo onde a ADM escreve a pendência; ela entra na
-mensagem, que termina se colocando à disposição:
+mensagem:
 
 ```
-Oi, Guilherme, tudo bem? Surgiu uma pendência na proposta da ABC Ltda (Amil):
-
+Olá, Guilherme. Tudo bem?
+A proposta do contrato ABC Ltda, na Amil, retornou com uma pendência.
 Pendência: cópia do contrato social assinado
-
-Me manda quando conseguir que eu já sigo com o processo.
-Qualquer dúvida, estou à disposição!
+Vamos acompanhar a regularização para que o processo possa seguir normalmente.
+Se precisar de qualquer suporte, estamos à disposição! 🤝
 ```
 
 ### 5 · Master
@@ -233,7 +234,7 @@ servidor/dominio.js             etapas, níveis, mapeamento, validações
 servidor/banco.js               esquema SQLite
 servidor/importar.js            importação com validação e deduplicação
 servidor/acompanhamento.js      verificações, níveis, fechamento e relatórios
-servidor/mensagens.js           as 15 mensagens por etapa
+servidor/mensagens.js           as mensagens prontas de cada etapa
 servidor/autenticacao.js        senha e sessão da Área Master
 servidor/api.js                 consultas e regras de escrita
 servidor/servidor.js            HTTP: serve a interface e a API
