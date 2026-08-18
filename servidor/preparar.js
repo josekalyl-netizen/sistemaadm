@@ -41,23 +41,51 @@ function pastasCandidatas() {
   ];
 }
 
-/** Procura .xlsx que pareçam planilha de supervisor (arquivo do ano). */
+/** Os .xlsx de uma pasta (sem entrar em subpastas). */
+function planilhasDaPasta(pasta) {
+  let arquivos;
+  try {
+    arquivos = readdirSync(pasta);
+  } catch {
+    return [];
+  }
+  return arquivos
+    .filter((nome) => /\.xlsx$/i.test(nome) && !nome.startsWith("~$"))
+    .map((nome) => join(pasta, nome))
+    .filter((caminho) => {
+      try { return statSync(caminho).isFile(); } catch { return false; }
+    });
+}
+
+/** Subpastas visíveis de uma pasta (só um nível — não varre o disco inteiro). */
+function subpastas(pasta) {
+  try {
+    return readdirSync(pasta, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && !e.name.startsWith("."))
+      .map((e) => join(pasta, e.name));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Procura as planilhas dos supervisores.
+ *
+ * Olha primeiro a pasta em si e, se não achar nada, as subpastas dela — na
+ * prática as planilhas costumam estar em algo como "Desktop/SISTEMA", e não
+ * soltas na Área de Trabalho.
+ */
 function procurarPlanilhas() {
   for (const pasta of pastasCandidatas()) {
     if (!existsSync(pasta)) continue;
-    let arquivos;
-    try {
-      arquivos = readdirSync(pasta);
-    } catch {
-      continue;
+
+    const aqui = planilhasDaPasta(pasta);
+    if (aqui.length) return { pasta, achados: aqui };
+
+    for (const sub of subpastas(pasta)) {
+      const dentro = planilhasDaPasta(sub);
+      if (dentro.length) return { pasta: sub, achados: dentro };
     }
-    const achados = arquivos
-      .filter((nome) => /\.xlsx$/i.test(nome) && !nome.startsWith("~$"))
-      .map((nome) => join(pasta, nome))
-      .filter((caminho) => {
-        try { return statSync(caminho).isFile(); } catch { return false; }
-      });
-    if (achados.length) return { pasta, achados };
   }
   return null;
 }
@@ -121,9 +149,11 @@ export async function prepararSePreciso() {
   if (!existsSync(JSON_PLANILHAS)) {
     const encontradas = procurarPlanilhas();
     if (!encontradas) {
-      log("\n  Não achei nenhuma planilha .xlsx.");
-      log("  Coloque os arquivos dos supervisores na pasta \"planilhas\" aqui dentro");
-      log("  do projeto e rode de novo — ou aponte a pasta:");
+      log("\n  Não achei nenhuma planilha .xlsx. Procurei em:");
+      for (const pasta of pastasCandidatas()) log(`    · ${pasta}${existsSync(pasta) ? "" : "  (não existe)"}`);
+      log("\n  (e nas subpastas de cada uma, um nível)");
+      log("\n  Copie os arquivos dos supervisores para a pasta \"planilhas\" aqui");
+      log("  dentro do projeto e rode de novo — ou aponte a pasta certa:");
       log("      PLANILHAS=/caminho/da/pasta npm start\n");
       log("  O sistema vai subir vazio; dá para cadastrar as propostas na mão.\n");
       return false;

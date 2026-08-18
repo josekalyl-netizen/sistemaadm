@@ -17,7 +17,7 @@
  *    não vira proposta nova.
  */
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -154,10 +154,24 @@ function abasNaOrdemDeImportacao(arquivos) {
 
 export function importar({ simular = false, recomecar = false, ano = 2026, caminho = ARQUIVO_PLANILHAS } = {}) {
   const db = abrirBanco();
+
+  if (!existsSync(caminho)) {
+    throw new Error(
+      `Não existe ${caminho}.\n`
+      + "  Esse arquivo é gerado a partir das planilhas. Copie os .xlsx dos\n"
+      + "  supervisores para a pasta \"planilhas\" e rode:  npm start",
+    );
+  }
   const bruto = JSON.parse(readFileSync(caminho, "utf8"));
 
   if (recomecar && !simular) {
-    db.exec("DELETE FROM historico; DELETE FROM propostas;");
+    // historico e verificacoes somem por cascata; dia_resumo e mensagens_uso
+    // não têm proposta_id e ficariam apontando para propostas que não existem
+    // mais, envenenando os números do Master.
+    db.exec(`DELETE FROM mensagens_uso;
+             DELETE FROM dia_resumo;
+             DELETE FROM historico;
+             DELETE FROM propostas;`);
   }
 
   const relatorio = {
@@ -318,5 +332,12 @@ function imprimirRelatorio(r, simulacao) {
 if (process.argv[1] && process.argv[1].endsWith("importar.js")) {
   const simular = process.argv.includes("--simular");
   const recomecar = process.argv.includes("--recomecar");
-  imprimirRelatorio(importar({ simular, recomecar }), simular);
+  try {
+    imprimirRelatorio(importar({ simular, recomecar }), simular);
+  } catch (erro) {
+    // quem roda isso é o ADM, não um programador: erro previsto vira recado,
+    // não pilha de chamadas.
+    console.error(`\n  ${erro.message}\n`);
+    process.exit(1);
+  }
 }
