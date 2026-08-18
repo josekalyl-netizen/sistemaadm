@@ -189,6 +189,12 @@ export function obterProposta(db, id) {
 
 // ------------------------------------------------------------------ escrita
 
+/**
+ * Supervisor da proposta. Prioridade: escolha explícita > carteira do
+ * corretor (cadastrada pelo Master) > nenhum. Assim, quando a ADM escolhe um
+ * corretor já vinculado a um supervisor, a proposta já nasce com o
+ * supervisor certo, sem precisar perguntar de novo.
+ */
 function resolverSupervisor(db, entrada) {
   if (entrada.supervisor_id) {
     const s = db.prepare("SELECT * FROM supervisores WHERE id = ?").get(Number(entrada.supervisor_id));
@@ -196,10 +202,22 @@ function resolverSupervisor(db, entrada) {
     return s;
   }
   if (texto(entrada.nome_supervisor)) return supervisorPorNome(db, entrada.nome_supervisor);
+  const corretor = texto(entrada.corretor).toUpperCase();
+  if (corretor) {
+    const vinculo = db.prepare(`
+      SELECT s.* FROM corretores c JOIN supervisores s ON s.id = c.supervisor_id
+      WHERE c.nome = ? AND c.ativo = 1
+    `).get(corretor);
+    if (vinculo) return vinculo;
+  }
   return null;
 }
 
-/** A ADM responsável. Pode ficar vazia — vira "proposta sem responsável". */
+/**
+ * A ADM responsável. Usuários só são cadastrados pelo Master (tela
+ * Usuários) — por isso aqui só se BUSCA pelo id ou pelo nome; nunca se cria
+ * um usuário novo a partir do cadastro de uma proposta.
+ */
 function resolverAdm(db, entrada) {
   if (entrada.usuario_id === "" || entrada.usuario_id === null) return null;
   if (entrada.usuario_id !== undefined) {
@@ -207,14 +225,33 @@ function resolverAdm(db, entrada) {
     if (!u) throw new ErroDeUso("Responsável ADM não encontrado.");
     return u;
   }
-  if (texto(entrada.nome_adm)) return usuarioPorNome(db, entrada.nome_adm);
+  if (texto(entrada.nome_adm)) {
+    const u = db.prepare("SELECT * FROM usuarios WHERE nome = ?").get(texto(entrada.nome_adm).toUpperCase());
+    if (!u) throw new ErroDeUso("Responsável ADM não encontrado.");
+    return u;
+  }
   return null;
 }
 
-export function criarProposta(db, entrada, autor = "operacional") {
-  const razao = texto(entrada.razao_social);
-  if (!razao) throw new ErroDeUso("Informe o nome da empresa.");
+/** Campos que o cadastro manual de proposta obriga (a importação de planilha não passa por aqui). */
+function validarObrigatorios(entrada) {
+  const faltando = [];
+  if (!texto(entrada.razao_social)) faltando.push("Empresa");
+  if (!somenteDigitos(entrada.documento)) faltando.push("CPF/CNPJ");
+  if (!texto(entrada.corretor)) faltando.push("Corretor");
+  if (!texto(entrada.operadora)) faltando.push("Operadora");
+  if (!texto(entrada.usuario_id) && !texto(entrada.nome_adm)) faltando.push("Responsável ADM");
+  if (lerValor(entrada.valor) === null) faltando.push("Valor");
+  if (!lerData(entrada.data_proposta)) faltando.push("Emissão");
+  if (faltando.length) {
+    throw new ErroDeUso(`Preencha antes de cadastrar: ${faltando.join(", ")}.`);
+  }
+}
 
+export function criarProposta(db, entrada, autor = "operacional") {
+  validarObrigatorios(entrada);
+
+  const razao = texto(entrada.razao_social);
   const supervisor = resolverSupervisor(db, entrada);
   const adm = resolverAdm(db, entrada);
   const status = CODIGOS_ETAPA.includes(entrada.status_atual) ? entrada.status_atual : "nova";
@@ -240,6 +277,7 @@ export function criarProposta(db, entrada, autor = "operacional") {
     ultima_verificacao: null,
     verificada_por: null,
     implantada_em: status === "implantada" ? hoje() : null,
+    cancelada_em: status === "cancelada" ? hoje() : null,
     situacao_origem: "",
     origem_arquivo: "cadastro manual",
     origem_aba: "",
@@ -292,14 +330,16 @@ export function mudarStatus(db, id, { status, motivo, pendencia_tipo, pendencia_
 
   const novoTipo = status === "pendente" ? texto(pendencia_tipo ?? atual.pendencia_tipo) : "";
   const novoDetalhe = status === "pendente" ? texto(pendencia_detalhe ?? atual.pendencia_detalhe) : "";
-  // a data de implantação é carimbada quando a proposta chega em "Implantada"
-  // e apagada se ela voltar atrás — é ela que alimenta "implantadas no dia".
+  // a data de implantação/cancelamento é carimbada quando a proposta chega
+  // naquela etapa e apagada se ela voltar atrás — são elas que alimentam
+  // "implantadas no dia" e "cancelado no mês" (em R$, no dashboard).
   const implantadaEm = status === "implantada" ? (atual.implantada_em || hoje()) : null;
+  const canceladaEm = status === "cancelada" ? (atual.cancelada_em || hoje()) : null;
 
   db.prepare(`
     UPDATE propostas SET status_atual = ?, atualizado_em = ?,
-           pendencia_tipo = ?, pendencia_detalhe = ?, implantada_em = ? WHERE id = ?
-  `).run(status, agora(), novoTipo, novoDetalhe, implantadaEm, Number(id));
+           pendencia_tipo = ?, pendencia_detalhe = ?, implantada_em = ?, cancelada_em = ? WHERE id = ?
+  `).run(status, agora(), novoTipo, novoDetalhe, implantadaEm, canceladaEm, Number(id));
 
   if (status !== atual.status_atual) {
     registrarHistorico(db, Number(id), {
@@ -468,6 +508,47 @@ export function alterarUsuario(db, id, entrada) {
   return db.prepare("SELECT id, nome, papel, ativo FROM usuarios WHERE id = ?").get(usuario.id);
 }
 
+// ---------------------------------------------------------------- corretores
+
+/** Carteira de corretores cadastrada pelo Master — alimenta o cadastro de proposta. */
+export function listarCorretores(db) {
+  return db.prepare(`
+    SELECT c.id, c.nome, c.supervisor_id, s.nome AS supervisor_nome
+    FROM corretores c LEFT JOIN supervisores s ON s.id = c.supervisor_id
+    WHERE c.ativo = 1 ORDER BY s.nome, c.nome
+  `).all();
+}
+
+/**
+ * Importa "corretor,supervisor" (uma linha por corretor; cabeçalho opcional).
+ * Só o Master sobe isso. Corretor que já existe tem o supervisor atualizado
+ * — é assim que se corrige um vínculo errado, sem apagar nada.
+ */
+export function importarCorretoresCSV(db, csv) {
+  const linhas = String(csv || "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  let importados = 0;
+  let atualizados = 0;
+  for (const linha of linhas) {
+    const [nomeBruto, supervisorBruto] = linha.split(",");
+    const nome = texto(nomeBruto).toUpperCase();
+    const nomeSupervisor = texto(supervisorBruto);
+    if (!nome || !nomeSupervisor || nome === "CORRETOR") continue;
+    const supervisor = supervisorPorNome(db, nomeSupervisor);
+    const existente = db.prepare("SELECT id FROM corretores WHERE nome = ?").get(nome);
+    if (existente) {
+      db.prepare("UPDATE corretores SET supervisor_id = ?, ativo = 1 WHERE id = ?").run(supervisor.id, existente.id);
+      atualizados += 1;
+    } else {
+      db.prepare("INSERT INTO corretores (nome, supervisor_id) VALUES (?, ?)").run(nome, supervisor.id);
+      importados += 1;
+    }
+  }
+  if (!importados && !atualizados) {
+    throw new ErroDeUso('CSV vazio ou fora do formato "corretor,supervisor".');
+  }
+  return { importados, atualizados };
+}
+
 // ------------------------------------------------------------------- config
 
 /** Listas que alimentam os campos de filtro (só o que existe no banco). */
@@ -488,6 +569,7 @@ export function config(db) {
     `).all(),
     operadoras: distintos("operadora"),
     corretores: distintos("corretor"),
+    corretores_cadastro: listarCorretores(db),
     hoje: hoje(),
   };
 }
@@ -495,4 +577,15 @@ export function config(db) {
 /** Conferência de documento usada pelo formulário de cadastro. */
 export function conferirDocumento(valor) {
   return { ...validarDocumento(valor), formatado: formatarDocumento(valor) };
+}
+
+/** Anos e meses com propostas implantadas — alimenta a navegação da tela Implantadas. */
+export function implantadasPorMes(db) {
+  return db.prepare(`
+    SELECT substr(implantada_em, 1, 4) AS ano, substr(implantada_em, 6, 2) AS mes,
+           COUNT(*) AS quantidade, SUM(valor) AS valor
+    FROM propostas
+    WHERE status_atual = 'implantada' AND implantada_em IS NOT NULL AND implantada_em <> ''
+    GROUP BY ano, mes ORDER BY ano DESC, mes DESC
+  `).all();
 }

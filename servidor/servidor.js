@@ -16,12 +16,13 @@ import { abrirBanco } from "./banco.js";
 import { prepararSePreciso } from "./preparar.js";
 import {
   ErroDeUso, alterarUsuario, atribuirAdm, conferirDocumento, config,
-  criarProposta, criarUsuario, editarProposta, listarPropostas, listarUsuarios,
+  criarProposta, criarUsuario, editarProposta, implantadasPorMes,
+  importarCorretoresCSV, listarCorretores, listarPropostas, listarUsuarios,
   mudarStatus, obterProposta,
 } from "./api.js";
 import {
   fecharDiasPassados, historicoDiario, porUsuario, relatorio, situacaoAtual,
-  verificar,
+  valoresPainel, verificar,
 } from "./acompanhamento.js";
 import { escolherMensagem, registrarUso } from "./mensagens.js";
 import {
@@ -106,8 +107,15 @@ async function rotaApi(req, res, url) {
     return {
       ...situacaoAtual(db, { usuario_id: filtros.usuario_id }),
       sem_responsavel: db.prepare("SELECT COUNT(*) AS n FROM propostas WHERE usuario_id IS NULL").get().n,
+      valores: valoresPainel(db, { usuario_id: filtros.usuario_id }),
     };
   }
+
+  if (caminho === "/implantadas/resumo" && metodo === "GET") {
+    return { meses: implantadasPorMes(db) };
+  }
+
+  if (caminho === "/corretores" && metodo === "GET") return listarCorretores(db);
 
   // --------------------------------------------------------- usuários
   // A lista é aberta (é ela que alimenta o seletor do topo); cadastrar e
@@ -219,6 +227,10 @@ async function rotaApi(req, res, url) {
     }
     if ((m = caminho.match(/^\/master\/usuarios\/(\d+)$/)) && metodo === "PATCH") {
       return alterarUsuario(db, m[1], await lerCorpo(req));
+    }
+    if (caminho === "/master/corretores/csv" && metodo === "POST") {
+      const corpo = await lerCorpo(req);
+      return importarCorretoresCSV(db, corpo.csv || "");
     }
   }
 

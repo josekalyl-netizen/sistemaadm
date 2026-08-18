@@ -2,14 +2,15 @@
  * Cadastro de proposta.
  *
  * Corretor e Responsável ADM são coisas diferentes e ficam separados no
- * formulário: o corretor é quem trouxe o negócio (texto livre); a ADM é quem
- * vai acompanhar a proposta aqui dentro (escolhida na lista de usuários).
+ * formulário: o corretor é quem trouxe o negócio — escolhido da carteira que
+ * o Master cadastrou, já vinculado a um supervisor — e a ADM é quem vai
+ * acompanhar a proposta aqui dentro.
  *
- * A proposta PODE ser cadastrada sem ADM — mas aí cai na fila "sem
- * responsável", que aparece em Alertas para o Master distribuir.
+ * Empresa, CPF/CNPJ, corretor, operadora, responsável ADM, valor e emissão
+ * são obrigatórios: sem eles o cadastro não é liberado.
  */
 
-import { $, api, avisar, esc } from "./util.js";
+import { $, api, avisar, esc, ligarMascaraDocumento, ligarMascaraMoeda } from "./util.js";
 import { estado } from "./estado.js";
 
 let aoCriar = () => {};
@@ -32,8 +33,7 @@ function fechar() {
 
 function formulario() {
   const cfg = estado.config;
-  const lista = (valores, limite) => valores.slice(0, limite)
-    .map((v) => `<option value="${esc(v)}"></option>`).join("");
+  const corretores = cfg.corretores_cadastro || [];
 
   return `
   <div class="modal-caixa" role="dialog" aria-modal="true" aria-label="Nova proposta">
@@ -51,24 +51,27 @@ function formulario() {
           <input id="c-razao" class="campo" placeholder="razão social">
         </div>
         <div>
-          <label class="rotulo" for="c-documento">CNPJ / CPF</label>
+          <label class="rotulo" for="c-documento">CNPJ / CPF *</label>
           <input id="c-documento" class="campo" inputmode="numeric" placeholder="00.000.000/0000-00">
           <div class="dica" id="c-doc-dica"></div>
         </div>
         <div>
-          <label class="rotulo" for="c-corretor">Corretor</label>
-          <input id="c-corretor" class="campo" list="l-corretores" placeholder="quem trouxe o negócio">
-          <datalist id="l-corretores">${lista(cfg.corretores, 120)}</datalist>
+          <label class="rotulo" for="c-corretor">Corretor *</label>
+          <select id="c-corretor" class="campo">
+            <option value="">— escolha —</option>
+            ${corretores.map((c) => `<option value="${esc(c.nome)}" data-supervisor="${c.supervisor_id ?? ""}" data-supervisor-nome="${esc(c.supervisor_nome || "")}">${esc(c.nome)}${c.supervisor_nome ? ` (${esc(c.supervisor_nome)})` : ""}</option>`).join("")}
+          </select>
+          <div class="dica" id="c-corretor-dica">${corretores.length ? "" : "Nenhum corretor cadastrado — peça ao Master para subir a carteira."}</div>
         </div>
         <div>
-          <label class="rotulo" for="c-operadora">Operadora</label>
+          <label class="rotulo" for="c-operadora">Operadora *</label>
           <input id="c-operadora" class="campo" list="l-operadoras">
-          <datalist id="l-operadoras">${lista(cfg.operadoras, 60)}</datalist>
+          <datalist id="l-operadoras">${cfg.operadoras.slice(0, 60).map((v) => `<option value="${esc(v)}"></option>`).join("")}</datalist>
         </div>
         <div>
-          <label class="rotulo" for="c-usuario">Responsável ADM</label>
+          <label class="rotulo" for="c-usuario">Responsável ADM *</label>
           <select id="c-usuario" class="campo">
-            <option value="">— definir depois —</option>
+            <option value="">— escolha —</option>
             ${cfg.usuarios.map((u) => `<option value="${u.id}"
               ${String(u.id) === String(estado.usuario) ? "selected" : ""}>${esc(u.nome)}</option>`).join("")}
           </select>
@@ -85,11 +88,11 @@ function formulario() {
           <input id="c-numero" class="campo" placeholder="número">
         </div>
         <div>
-          <label class="rotulo" for="c-valor">Valor (R$)</label>
+          <label class="rotulo" for="c-valor">Valor (R$) *</label>
           <input id="c-valor" class="campo" inputmode="decimal" placeholder="1.234,56">
         </div>
         <div>
-          <label class="rotulo" for="c-data">Emissão</label>
+          <label class="rotulo" for="c-data">Emissão *</label>
           <input id="c-data" class="campo" type="date">
         </div>
         <div>
@@ -103,19 +106,8 @@ function formulario() {
       </div>
 
       <div id="c-pendencia" class="oculto" style="margin-top:20px">
-        <div class="grade">
-          <div>
-            <label class="rotulo" for="c-pend-tipo">Qual é a pendência?</label>
-            <select id="c-pend-tipo" class="campo">
-              <option value="">—</option>
-              ${cfg.tipos_pendencia.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}
-            </select>
-          </div>
-          <div>
-            <label class="rotulo" for="c-pend-detalhe">Detalhe</label>
-            <input id="c-pend-detalhe" class="campo">
-          </div>
-        </div>
+        <label class="rotulo" for="c-pend-detalhe">Pendência</label>
+        <input id="c-pend-detalhe" class="campo" placeholder="descreva a pendência">
       </div>
 
       <div style="margin-top:20px">
@@ -139,8 +131,17 @@ function ligar() {
 
   $("#c-data").valueAsDate = new Date();
 
+  ligarMascaraMoeda($("#c-valor"));
+  ligarMascaraDocumento($("#c-documento"));
+
   $("#c-status").addEventListener("change", (e) => {
     $("#c-pendencia").classList.toggle("oculto", e.target.value !== "pendente");
+  });
+
+  $("#c-corretor").addEventListener("change", (e) => {
+    const opcao = e.target.selectedOptions[0];
+    const supervisorNome = opcao?.dataset.supervisorNome;
+    $("#c-corretor-dica").textContent = supervisorNome ? `Supervisor: ${supervisorNome}` : "";
   });
 
   $("#c-documento").addEventListener("blur", async (e) => {
@@ -163,11 +164,26 @@ function ligar() {
   $("#c-salvar").addEventListener("click", salvar);
 }
 
-async function salvar() {
-  const corpo = {
+/** Campos exigidos antes de liberar o cadastro. */
+function camposFaltando() {
+  const faltando = [];
+  if (!$("#c-razao").value.trim()) faltando.push("Empresa");
+  if (!$("#c-documento").value.replace(/\D/g, "")) faltando.push("CPF/CNPJ");
+  if (!$("#c-corretor").value) faltando.push("Corretor");
+  if (!$("#c-operadora").value.trim()) faltando.push("Operadora");
+  if (!$("#c-usuario").value) faltando.push("Responsável ADM");
+  if (!$("#c-valor").value.trim()) faltando.push("Valor");
+  if (!$("#c-data").value) faltando.push("Emissão");
+  return faltando;
+}
+
+function corpoFormulario() {
+  const corretorOpcao = $("#c-corretor").selectedOptions[0];
+  return {
     razao_social: $("#c-razao").value,
     documento: $("#c-documento").value,
     corretor: $("#c-corretor").value,
+    supervisor_id: corretorOpcao?.dataset.supervisor || "",
     operadora: $("#c-operadora").value,
     usuario_id: $("#c-usuario").value,
     status_atual: $("#c-status").value,
@@ -177,16 +193,23 @@ async function salvar() {
     data_validade: $("#c-validade").value,
     cadastrado: $("#c-cadastrado").value,
     observacoes: $("#c-obs").value,
-    pendencia_tipo: $("#c-pend-tipo")?.value || "",
     pendencia_detalhe: $("#c-pend-detalhe")?.value || "",
   };
+}
+
+async function salvar() {
+  const faltando = camposFaltando();
+  if (faltando.length) {
+    mostrarErro(`Preencha antes de cadastrar: ${faltando.join(", ")}.`);
+    return;
+  }
+
+  const corpo = corpoFormulario();
 
   try {
     const nova = await api.criar(corpo);
     fechar();
-    avisar(nova.usuario_id
-      ? `Proposta #${nova.id} cadastrada para ${nova.nome_adm}.`
-      : `Proposta #${nova.id} cadastrada SEM responsável — aparece em Alertas.`);
+    avisar(`Proposta #${nova.id} cadastrada para ${nova.nome_adm}.`);
     aoCriar(nova.id);
   } catch (e) {
     if (e.status === 409 && confirm(`${e.message}\n\nCadastrar mesmo assim?`)) {

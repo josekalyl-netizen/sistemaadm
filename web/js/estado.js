@@ -18,7 +18,7 @@ export const estado = {
   /** "" = todos · "sem" = propostas sem responsável · número = id da ADM */
   usuario: "",
 
-  tela: "dashboard",
+  tela: "propostas",
 
   filtros: {
     busca: "", status: "", nivel: "", operadora: "", corretor: "",
@@ -70,7 +70,7 @@ export function escreverEndereco() {
     const v = valores[chave];
     if (v && !(chave === "pagina" && Number(v) === 1)
           && !(chave === "ordem" && v === "recentes")
-          && !(chave === "tela" && v === "dashboard")) {
+          && !(chave === "tela" && v === "propostas")) {
       p.set(chave, v);
     }
   }

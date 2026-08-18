@@ -57,6 +57,57 @@ export function diaSemana(iso) {
   return `${nomes[d.getUTCDay()]} · ${m[3]}/${m[2]}`;
 }
 
+/**
+ * Máscara de moeda em tempo real: o usuário digita só números e o campo se
+ * comporta como valor em reais — "123456" vira "1.234,56" enquanto digita,
+ * igual a um totem de pagamento. `input.value` fica sempre pronto para
+ * `lerValor()` no domínio do servidor.
+ */
+export function ligarMascaraMoeda(input) {
+  if (!input) return;
+  const aplicar = () => {
+    const digitos = input.value.replace(/\D/g, "");
+    if (!digitos) { input.value = ""; return; }
+    const numero = Number(digitos) / 100;
+    input.value = numero.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+  input.addEventListener("input", aplicar);
+}
+
+/** Preenche um campo de valor já mascarado, a partir do número vindo do servidor. */
+export function valorParaCampo(numero) {
+  if (numero === null || numero === undefined || numero === "") return "";
+  return Number(numero).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/**
+ * Máscara de CPF/CNPJ em tempo real. Até 11 dígitos, formata como CPF
+ * (000.000.000-00); a partir do 12º dígito, passa sozinho a formatar como
+ * CNPJ (00.000.000/0000-00) — o comprimento é quem diz qual é.
+ */
+export function ligarMascaraDocumento(input) {
+  if (!input) return;
+  input.addEventListener("input", () => {
+    const digitos = input.value.replace(/\D/g, "").slice(0, 14);
+    input.value = mascararDocumento(digitos);
+  });
+}
+
+export function mascararDocumento(digitos) {
+  const d = String(digitos || "").replace(/\D/g, "").slice(0, 14);
+  if (d.length <= 11) {
+    return d
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
+  }
+  return d
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/(\d{2})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3/$4")
+    .replace(/(\d{2})\.(\d{3})\.(\d{3})\/(\d{4})(\d)/, "$1.$2.$3/$4-$5");
+}
+
 /** #D4AF37 -> "212 175 55" (formato dos tokens de cor). */
 export function corRGB(hex) {
   const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ""));
@@ -106,6 +157,8 @@ export const api = {
   criarUsuario: (corpo) => pedir("/api/usuarios", { method: "POST", corpo }),
   alterarUsuario: (id, corpo) => pedir(`/api/master/usuarios/${id}`, { method: "PATCH", corpo }),
   conferirDocumento: (doc) => pedir(`/api/conferir-documento?documento=${encodeURIComponent(doc)}`),
+  implantadasResumo: () => pedir("/api/implantadas/resumo"),
+  corretores: () => pedir("/api/corretores"),
 
   master: {
     sessao: () => pedir("/api/master/sessao"),
@@ -114,6 +167,7 @@ export const api = {
     produtividade: () => pedir("/api/master/produtividade"),
     historico: (f) => pedir(`/api/master/historico?${query(f)}`),
     relatorio: (f) => pedir(`/api/master/relatorio?${query(f)}`),
+    corretoresCSV: (csv) => pedir("/api/master/corretores/csv", { method: "POST", corpo: { csv } }),
   },
 };
 

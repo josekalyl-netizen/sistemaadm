@@ -139,6 +139,11 @@ h1, h2, h3 { margin: 0; font-weight: 500; }
 }
 
 /* ------------------------------------------------------------- controles */
+/* sem isto, o navegador pinta <select> com as cores nativas do SO (fundo
+   branco, texto preto) mesmo no tema escuro — o campo de usuário "sumia". */
+:root { color-scheme: light; }
+:root[data-tema="escuro"] { color-scheme: dark; }
+
 input, select, textarea, button { font-family: inherit; font-size: 13px; color: inherit; }
 
 .campo {
@@ -151,6 +156,14 @@ input, select, textarea, button { font-family: inherit; font-size: 13px; color: 
   color: rgb(var(--tinta));
   outline: none;
   transition: border-color .15s;
+}
+select.campo, select {
+  background-color: rgb(var(--papel));
+  color: rgb(var(--tinta));
+}
+select.campo option, select option {
+  background-color: rgb(var(--papel));
+  color: rgb(var(--tinta));
 }
 .campo:focus { border-bottom-color: rgb(var(--tinta)); }
 .campo::placeholder { color: rgb(var(--apagado)); }

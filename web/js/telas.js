@@ -3,35 +3,41 @@
  *
  * Todas respeitam o usuário selecionado no topo: a ADM vê a carteira dela, o
  * Master escolhe "Todos" ou uma ADM específica.
+ *
+ * Acompanhamento, Relatórios, Usuários e Corretores são visualizações de
+ * dentro da Área Master — não são abas de topo. Só Propostas, Pendentes,
+ * Alertas e Implantadas ficam abertas para o dia a dia da ADM.
  */
 
-import { $, $$, api, avisar, corRGB, data, dataHora, diaSemana, esc, moeda, numero } from "./util.js";
-import { estado, etapaDe, filtrosDaBusca, nomeDoUsuario, recarregarConfig } from "./estado.js";
+import { $, $$, api, avisar, corRGB, data, diaSemana, esc, moeda, numero } from "./util.js";
+import { estado, filtrosDaBusca, nomeDoUsuario, recarregarConfig } from "./estado.js";
 import { cabecalhoTela, listaVazia, montarLista } from "./lista.js";
 import { abrirFicha } from "./ficha.js";
 
 const alvo = () => $("#tela");
+const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho",
+  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
 /** Chamado pelo app quando o usuário muda de tela ou de filtro. */
 export const TELAS = {
-  dashboard: { nome: "Dashboard", desenhar: dashboard },
   propostas: { nome: "Propostas", desenhar: propostas },
   pendentes: { nome: "Pendentes", desenhar: pendentes },
   alertas: { nome: "Alertas", desenhar: alertas },
   implantadas: { nome: "Implantadas", desenhar: implantadas },
-  acompanhamento: { nome: "Acompanhamento", desenhar: acompanhamento },
-  relatorios: { nome: "Relatórios", desenhar: relatorios },
-  usuarios: { nome: "Usuários", desenhar: usuarios },
   master: { nome: "Master", desenhar: master },
 };
 
-// =========================================================== 1. DASHBOARD
+/** Telas em que a busca global do topo faz sentido (onde aparecem propostas). */
+export const TELAS_COM_BUSCA = ["propostas", "implantadas"];
 
-async function dashboard() {
+// =================================================== 1. PROPOSTAS (+ painel)
+
+async function propostas() {
   const [p, lista] = await Promise.all([
     api.painel({ usuario_id: estado.usuario }),
-    api.listar(filtrosDaBusca({ nivel: "pendente,atrasada,critica", ordem: "atraso", limite: 25 })),
+    api.listar(filtrosDaBusca()),
   ]);
+  const cfg = estado.config;
 
   const bloco = (rotulo, valor, { destaque = false, ir = null } = {}) => `
     <div class="numero-bloco ${destaque && valor > 0 ? "destaque" : ""} ${ir ? "acionavel" : ""}"
@@ -40,10 +46,20 @@ async function dashboard() {
       <div class="numero">${numero(valor)}</div>
     </div>`;
 
+  const blocoValor = (rotulo, obj, destaque = false) => `
+    <div class="numero-bloco ${destaque ? "destaque" : ""}">
+      <span class="rotulo">${esc(rotulo)}</span>
+      <div class="numero" style="font-size:22px">${moeda(obj?.total ?? 0)}</div>
+      <div class="dica" style="margin-top:4px">${numero(obj?.quantidade ?? 0)} proposta${(obj?.quantidade ?? 0) === 1 ? "" : "s"}</div>
+    </div>`;
+
+  const opcoes = (valores, atual, rotulo = (v) => v, valor = (v) => v) =>
+    valores.map((v) => `<option value="${esc(valor(v))}" ${String(valor(v)) === String(atual) ? "selected" : ""}>${esc(rotulo(v))}</option>`).join("");
+
   alvo().innerHTML = `
     ${cabecalhoTela(
-      estado.usuario ? nomeDoUsuario() : "Hoje",
-      `${data(p.dia)} · ${p.para_acompanhar} propostas em acompanhamento`,
+      estado.usuario ? nomeDoUsuario() : "Propostas",
+      `${data(p.dia)} · ${numero(lista.total)} no filtro atual`,
     )}
 
     <div class="numeros">
@@ -65,67 +81,84 @@ async function dashboard() {
       </div>` : ""}
 
     <div style="padding-top:34px">
-      <div class="secao">O que falta acompanhar${estado.usuario ? "" : " (todas as ADMs)"}</div>
-      <div id="fila"></div>
-    </div>`;
-
-  montarLista($("#fila"), lista, {
-    vazio: "Tudo em dia. Nenhuma proposta esperando acompanhamento.",
-  });
-
-  $$("[data-ir]").forEach((b) => b.addEventListener("click", () => irPara(b.dataset.ir)));
-}
-
-// =========================================================== 2. PROPOSTAS
-
-async function propostas() {
-  const lista = await api.listar(filtrosDaBusca());
-  const cfg = estado.config;
-
-  const opcoes = (valores, atual, rotulo = (v) => v, valor = (v) => v) =>
-    valores.map((v) => `<option value="${esc(valor(v))}" ${String(valor(v)) === String(atual) ? "selected" : ""}>${esc(rotulo(v))}</option>`).join("");
-
-  alvo().innerHTML = `
-    ${cabecalhoTela("Propostas", `${numero(lista.total)} no filtro atual`, `
-      <select id="f-ordem" class="campo" style="width:auto">
-        ${opcoes([
-          ["recentes", "Atualizadas recentemente"], ["atraso", "Mais atrasadas"],
-          ["etapa", "Etapa"], ["data", "Emissão"], ["valor", "Valor"], ["empresa", "Empresa A–Z"],
-        ], estado.filtros.ordem, (o) => o[1], (o) => o[0])}
-      </select>`)}
-
-    <div class="etapas" id="etapas"></div>
-
-    <div class="filtros">
-      <div>
-        <label class="rotulo" for="f-operadora">Operadora</label>
-        <select id="f-operadora" class="campo">
-          <option value="">Todas</option>${opcoes(cfg.operadoras, estado.filtros.operadora)}
-        </select>
-      </div>
-      <div>
-        <label class="rotulo" for="f-corretor">Corretor</label>
-        <select id="f-corretor" class="campo">
-          <option value="">Todos</option>${opcoes(cfg.corretores, estado.filtros.corretor)}
-        </select>
-      </div>
-      <div>
-        <label class="rotulo" for="f-cadastrado">Cadastrado</label>
-        <select id="f-cadastrado" class="campo">
-          ${opcoes([["", "Tanto faz"], ["sim", "Sim"], ["nao", "Não"]], estado.filtros.cadastrado, (o) => o[1], (o) => o[0])}
-        </select>
-      </div>
-      <div>
-        <label class="rotulo" for="f-de">Emissão de</label>
-        <input id="f-de" class="campo" type="date" value="${esc(estado.filtros.de)}">
-      </div>
-      <div>
-        <label class="rotulo" for="f-ate">Emissão até</label>
-        <input id="f-ate" class="campo" type="date" value="${esc(estado.filtros.ate)}">
+      <div class="secao">Em acompanhamento (R$)</div>
+      <div class="numeros">
+        ${blocoValor("Para acompanhar hoje", p.valores?.para_acompanhar, true)}
       </div>
     </div>
 
-    <div id="lista"></div>`;
+    <div style="padding-top:34px">
+      <div class="secao">Cenário do mês</div>
+      <div class="numeros">
+        ${blocoValor("Para acompanhar hoje", p.valores?.para_acompanhar)}
+        ${blocoValor("Em análise", p.valores?.em_analise)}
+        ${blocoValor("Cotação", p.valores?.cotacao)}
+        ${blocoValor("Proposta enviada", p.valores?.enviada)}
+        ${blocoValor("Pendente", p.valores?.pendente)}
+        ${blocoValor("Em implantação", p.valores?.em_implantacao)}
+        ${blocoValor("Implantado no mês", p.valores?.implantado_mes)}
+        ${blocoValor("Cancelado no mês", p.valores?.cancelado_mes)}
+      </div>
+      <p class="dica" style="margin-top:10px">
+        As etapas em aberto mostram o que está nelas agora; implantado e cancelado mostram
+        o que aconteceu desde o dia 1º — vira sozinho quando o mês muda.
+      </p>
+    </div>
+
+    <div style="padding-top:38px">
+      <div class="secao">Propostas</div>
+
+      <div class="tela-topo" style="padding-top:0">
+        <span></span>
+        <div class="direita">
+          <select id="f-ordem" class="campo" style="width:auto">
+            ${opcoes([
+              ["recentes", "Atualizadas recentemente"], ["atraso", "Mais atrasadas"],
+              ["etapa", "Etapa"], ["data", "Emissão"], ["valor", "Valor"], ["empresa", "Empresa A–Z"],
+            ], estado.filtros.ordem, (o) => o[1], (o) => o[0])}
+          </select>
+        </div>
+      </div>
+
+      <div class="etapas" id="etapas"></div>
+
+      <div class="filtros">
+        <div>
+          <label class="rotulo" for="f-verificacao">Verificação</label>
+          <select id="f-verificacao" class="campo">
+            ${opcoes([["", "Tanto faz"], ["pendente,atrasada,critica", "Não verificadas"]], estado.filtros.nivel, (o) => o[1], (o) => o[0])}
+          </select>
+        </div>
+        <div>
+          <label class="rotulo" for="f-operadora">Operadora</label>
+          <select id="f-operadora" class="campo">
+            <option value="">Todas</option>${opcoes(cfg.operadoras, estado.filtros.operadora)}
+          </select>
+        </div>
+        <div>
+          <label class="rotulo" for="f-corretor">Corretor</label>
+          <select id="f-corretor" class="campo">
+            <option value="">Todos</option>${opcoes(cfg.corretores, estado.filtros.corretor)}
+          </select>
+        </div>
+        <div>
+          <label class="rotulo" for="f-cadastrado">Cadastrado</label>
+          <select id="f-cadastrado" class="campo">
+            ${opcoes([["", "Tanto faz"], ["sim", "Sim"], ["nao", "Não"]], estado.filtros.cadastrado, (o) => o[1], (o) => o[0])}
+          </select>
+        </div>
+        <div>
+          <label class="rotulo" for="f-de">Emissão de</label>
+          <input id="f-de" class="campo" type="date" value="${esc(estado.filtros.de)}">
+        </div>
+        <div>
+          <label class="rotulo" for="f-ate">Emissão até</label>
+          <input id="f-ate" class="campo" type="date" value="${esc(estado.filtros.ate)}">
+        </div>
+      </div>
+
+      <div id="lista"></div>
+    </div>`;
 
   desenharEtapas(lista.contagem_por_etapa, lista.total_no_filtro);
   montarLista($("#lista"), lista, { aoPaginar: paginar });
@@ -135,12 +168,15 @@ async function propostas() {
     estado.filtros.pagina = 1;
     redesenhar();
   });
+  ligar("#f-verificacao", "nivel");
   ligar("#f-operadora", "operadora");
   ligar("#f-corretor", "corretor");
   ligar("#f-cadastrado", "cadastrado");
   ligar("#f-de", "de");
   ligar("#f-ate", "ate");
   ligar("#f-ordem", "ordem");
+
+  $$("[data-ir]").forEach((b) => b.addEventListener("click", () => irPara(b.dataset.ir)));
 }
 
 /** A régua de etapas: clicar entra na etapa, clicar de novo sai. */
@@ -164,7 +200,7 @@ function desenharEtapas(contagem, total) {
   }));
 }
 
-// ================================================== 3. PENDENTES / 4. ALERTAS
+// ================================================== 2. PENDENTES / 3. ALERTAS
 
 async function pendentes() {
   const lista = await api.listar(filtrosDaBusca({ nivel: "pendente", ordem: "atraso", status: "" }));
@@ -227,47 +263,209 @@ async function alertas() {
   }
 }
 
-// ========================================================= 5. IMPLANTADAS
+// ========================================= 4. IMPLANTADAS (ano → mês → lista)
+
+let implAno = null;
+let implMes = null;
 
 async function implantadas() {
-  const lista = await api.listar(filtrosDaBusca({ status: "implantada", nivel: "", ordem: "recentes" }));
+  const resumo = await api.implantadasResumo();
+  const meses = resumo.meses;
+
+  if (!meses.length) {
+    alvo().innerHTML = cabecalhoTela("Implantadas", "0 propostas concluídas")
+      + listaVazia("Nenhuma proposta implantada ainda.");
+    return;
+  }
+
+  if (implAno && !meses.some((m) => m.ano === implAno)) { implAno = null; implMes = null; }
+
+  if (!implAno) return implantadasAnos(meses);
+  if (!implMes) return implantadasMeses(meses);
+  return implantadasLista(meses);
+}
+
+function voltarLink(texto, aoClicar) {
+  return `<button class="btn btn-limpo btn-mini" id="impl-voltar" style="padding-left:0">← ${esc(texto)}</button>`;
+}
+
+function implantadasAnos(meses) {
+  const porAno = new Map();
+  for (const m of meses) {
+    const atual = porAno.get(m.ano) || { ano: m.ano, quantidade: 0, valor: 0 };
+    atual.quantidade += m.quantidade;
+    atual.valor += m.valor;
+    porAno.set(m.ano, atual);
+  }
+  const anos = [...porAno.values()].sort((a, b) => b.ano - a.ano);
+  const total = anos.reduce((a, b) => a + b.quantidade, 0);
+
   alvo().innerHTML = `
-    ${cabecalhoTela("Implantadas", `${numero(lista.total)} propostas concluídas`)}
+    ${cabecalhoTela("Implantadas", `${numero(total)} propostas concluídas · escolha o ano`)}
+    <div class="numeros">
+      ${anos.map((a) => `
+        <button class="numero-bloco acionavel" data-ano="${a.ano}" style="text-align:left;border:none;cursor:pointer">
+          <span class="rotulo">${esc(a.ano)}</span>
+          <div class="numero">${numero(a.quantidade)}</div>
+          <div class="dica" style="margin-top:4px">${moeda(a.valor)}</div>
+        </button>`).join("")}
+    </div>`;
+
+  $$("[data-ano]").forEach((b) => b.addEventListener("click", () => {
+    implAno = b.dataset.ano;
+    redesenhar();
+  }));
+}
+
+function implantadasMeses(meses) {
+  const doAno = meses.filter((m) => m.ano === implAno).sort((a, b) => b.mes - a.mes);
+  const total = doAno.reduce((a, b) => a + b.quantidade, 0);
+
+  alvo().innerHTML = `
+    ${cabecalhoTela("Implantadas", `${implAno} · ${numero(total)} propostas · escolha o mês`, voltarLink())}
+    <div class="numeros">
+      ${doAno.map((m) => `
+        <button class="numero-bloco acionavel" data-mes="${m.mes}" style="text-align:left;border:none;cursor:pointer">
+          <span class="rotulo">${esc(MESES[Number(m.mes) - 1] || m.mes)}</span>
+          <div class="numero">${numero(m.quantidade)}</div>
+          <div class="dica" style="margin-top:4px">${moeda(m.valor)}</div>
+        </button>`).join("")}
+    </div>`;
+
+  $("#impl-voltar").addEventListener("click", () => { implAno = null; redesenhar(); });
+  $$("[data-mes]").forEach((b) => b.addEventListener("click", () => {
+    implMes = b.dataset.mes;
+    redesenhar();
+  }));
+}
+
+async function implantadasLista(meses) {
+  const registro = meses.find((m) => m.ano === implAno && m.mes === implMes);
+  const inicio = `${implAno}-${implMes}-01`;
+  const fim = `${implAno}-${implMes}-31`;
+  const lista = await api.listar(filtrosDaBusca({
+    status: "implantada", nivel: "", ordem: "recentes",
+    implantada_de: inicio, implantada_ate: fim,
+  }));
+
+  alvo().innerHTML = `
+    ${cabecalhoTela(
+      "Implantadas",
+      `${esc(MESES[Number(implMes) - 1] || implMes)} de ${implAno} · ${numero(lista.total)} propostas · ${moeda(registro?.valor ?? 0)}`,
+      voltarLink(),
+    )}
     <div id="lista"></div>`;
+
+  $("#impl-voltar").addEventListener("click", () => { implMes = null; redesenhar(); });
   montarLista($("#lista"), lista, {
-    vazio: "Nenhuma proposta implantada ainda.",
+    vazio: "Nenhuma proposta implantada neste mês.",
     comVerificar: false,
     aoPaginar: paginar,
   });
 }
 
-// ====================================================== 6. ACOMPANHAMENTO
+/** Barra da taxa de acompanhamento. */
+function barraTaxa(taxa, base = null) {
+  if (base === 0) return '<span class="apagado">—</span>';
+  const t = Number(taxa) || 0;
+  return `<span class="barra ${t < 90 ? "baixa" : ""}"><i style="width:${Math.min(t, 100)}%"></i></span>
+          <span style="margin-left:8px">${t}%</span>`;
+}
 
-/** O ciclo diário: quanto havia para acompanhar e quanto foi acompanhado. */
-async function acompanhamento() {
-  if (!estado.masterAberto && !estado.usuario) {
-    alvo().innerHTML = cabecalhoTela("Acompanhamento")
-      + `<div class="vazio">Escolha um usuário no topo para ver o histórico dele —
-         ou entre na Área Master para ver a operação inteira.</div>`;
-    return;
-  }
+// ================================================================ 5. MASTER
 
-  let dias = [];
-  try {
-    const r = await api.master.historico({ usuario_id: estado.usuario });
-    dias = r.dias;
-  } catch {
-    // sem sessão de Master: mostra só o dia de hoje, que a própria ADM enxerga
-    const p = await api.painel({ usuario_id: estado.usuario });
-    dias = [{
-      dia: p.dia, novas: p.novas_hoje, para_acompanhar: p.para_acompanhar,
-      acompanhadas: p.acompanhadas, nao_acompanhadas: p.nao_acompanhadas,
-      implantadas: p.implantadas_hoje, taxa: p.taxa, hoje: true,
-    }];
-  }
+let masterSecao = "visao";
+let periodoRelatorio = "semana";
+
+async function master() {
+  if (!estado.masterAberto) return telaTrancada("Área Master");
+
+  const secoes = [
+    ["visao", "Visão geral"],
+    ["acompanhamento", "Acompanhamento"],
+    ["relatorios", "Relatórios"],
+    ["usuarios", "Usuários"],
+    ["corretores", "Corretores"],
+  ];
 
   alvo().innerHTML = `
-    ${cabecalhoTela("Acompanhamento", nomeDoUsuario())}
+    ${cabecalhoTela("Área Master", data(estado.config.hoje), `
+      <button class="btn btn-mini" id="sair-master">Sair</button>`)}
+    <div class="periodo" id="master-nav" style="margin-bottom:28px">
+      ${secoes.map(([c, n]) => `<button data-secao="${c}" class="${masterSecao === c ? "ativo" : ""}">${esc(n)}</button>`).join("")}
+    </div>
+    <div id="master-corpo"></div>`;
+
+  $("#sair-master").addEventListener("click", async () => {
+    await api.master.sair();
+    estado.masterAberto = false;
+    avisar("Você saiu da Área Master.");
+    redesenhar();
+  });
+
+  $$("#master-nav [data-secao]").forEach((b) => b.addEventListener("click", () => {
+    masterSecao = b.dataset.secao;
+    redesenhar();
+  }));
+
+  const corpo = { visao: masterVisao, acompanhamento: acompanhamento, relatorios: relatorios, usuarios: usuarios, corretores: corretores };
+  await (corpo[masterSecao] || masterVisao)();
+}
+
+async function masterVisao() {
+  const p = await api.master.produtividade();
+
+  $("#master-corpo").innerHTML = `
+    ${p.sem_responsavel ? `
+      <div class="filtros-barra" style="border-bottom:1px solid rgb(var(--fio))">
+        <span style="color:rgb(var(--alerta))">
+          ${p.sem_responsavel} proposta${p.sem_responsavel === 1 ? "" : "s"} sem ADM responsável
+        </span>
+        <button class="btn btn-mini" id="visao-ir-alertas">Distribuir</button>
+      </div>` : ""}
+
+    <div style="padding-top:26px">
+      <div class="secao">Produtividade de hoje</div>
+      <table>
+        <thead><tr>
+          <th>ADM</th><th class="num">Novas</th><th class="num">Para acompanhar</th>
+          <th class="num">Acompanhadas</th><th class="num">Pendentes</th>
+          <th class="num">Atrasadas</th><th class="num">Críticas</th><th class="num">Taxa</th>
+        </tr></thead>
+        <tbody>
+          ${p.usuarios.map((u) => `
+            <tr data-usuario="${u.usuario_id}" style="cursor:pointer">
+              <td>${esc(u.usuario)}</td>
+              <td class="num">${numero(u.novas)}</td>
+              <td class="num">${numero(u.para_acompanhar)}</td>
+              <td class="num">${numero(u.acompanhadas)}</td>
+              <td class="num">${numero(u.pendentes)}</td>
+              <td class="num" ${u.atrasadas ? 'style="color:rgb(var(--alerta))"' : ""}>${numero(u.atrasadas)}</td>
+              <td class="num" ${u.criticas ? 'style="color:rgb(var(--alerta))"' : ""}>${numero(u.criticas)}</td>
+              <td class="num">${barraTaxa(u.taxa, u.para_acompanhar)}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+      <p class="dica" style="margin-top:14px">Clique numa ADM para ver o histórico diário dela em Acompanhamento.</p>
+    </div>`;
+
+  $("#visao-ir-alertas")?.addEventListener("click", () => irPara("alertas"));
+
+  $$("#master-corpo [data-usuario]").forEach((tr) => tr.addEventListener("click", () => {
+    estado.usuario = tr.dataset.usuario;
+    $("#usuario").value = tr.dataset.usuario;
+    masterSecao = "acompanhamento";
+    redesenhar();
+  }));
+}
+
+// ---------------------------------------------------- 5a. Acompanhamento
+
+async function acompanhamento() {
+  const r = await api.master.historico({ usuario_id: estado.usuario });
+
+  $("#master-corpo").innerHTML = `
+    <div class="secao" style="margin-top:6px">Histórico diário · ${esc(nomeDoUsuario())}</div>
     <table>
       <thead><tr>
         <th>Dia</th><th class="num">Novas</th><th class="num">Para acompanhar</th>
@@ -275,7 +473,7 @@ async function acompanhamento() {
         <th class="num">Implantadas</th><th class="num">Taxa</th>
       </tr></thead>
       <tbody>
-        ${dias.map((d) => `
+        ${r.dias.map((d) => `
           <tr>
             <td>${esc(diaSemana(d.dia))}${d.hoje ? ' <span class="apagado">· hoje</span>' : ""}</td>
             <td class="num">${numero(d.novas)}</td>
@@ -287,39 +485,27 @@ async function acompanhamento() {
           </tr>`).join("")}
       </tbody>
     </table>
-    ${dias.length <= 1 ? `<p class="dica" style="margin-top:16px">
+    ${r.dias.length <= 1 ? `<p class="dica" style="margin-top:16px">
       O histórico começa a se acumular a partir de hoje: cada dia é fechado quando vira a meia-noite.
     </p>` : ""}`;
 }
 
-/**
- * Barra da taxa de acompanhamento. Quem não tinha nada para acompanhar não
- * ganha 100% — mostra travessão, senão o quadro do Master premiaria a ADM
- * sem carteira e puniria quem tem 300 propostas.
- */
-function barraTaxa(taxa, base = null) {
-  if (base === 0) return '<span class="apagado">—</span>';
-  const t = Number(taxa) || 0;
-  return `<span class="barra ${t < 90 ? "baixa" : ""}"><i style="width:${Math.min(t, 100)}%"></i></span>
-          <span style="margin-left:8px">${t}%</span>`;
-}
-
-// ========================================================== 7. RELATÓRIOS
-
-let periodoRelatorio = "semana";
+// -------------------------------------------------------- 5b. Relatórios
 
 async function relatorios() {
-  if (!estado.masterAberto) return telaTrancada("Relatórios");
-
   const r = await api.master.relatorio({ periodo: periodoRelatorio, usuario_id: estado.usuario });
 
-  alvo().innerHTML = `
-    ${cabecalhoTela("Relatórios", `${data(r.inicio)} a ${data(r.fim)}`, `
-      <div class="periodo" id="periodo">
-        ${[["hoje", "Hoje"], ["semana", "Semana"], ["mes", "Mês"]].map(([c, n]) =>
-          `<button data-periodo="${c}" class="${periodoRelatorio === c ? "ativo" : ""}">${n}</button>`).join("")}
+  $("#master-corpo").innerHTML = `
+    <div class="tela-topo" style="padding-top:6px">
+      <div class="secao" style="border:none;padding:0;margin:0">Relatórios · ${data(r.inicio)} a ${data(r.fim)}</div>
+      <div class="direita">
+        <div class="periodo" id="periodo">
+          ${[["hoje", "Hoje"], ["semana", "Semana"], ["mes", "Mês"]].map(([c, n]) =>
+            `<button data-periodo="${c}" class="${periodoRelatorio === c ? "ativo" : ""}">${n}</button>`).join("")}
+        </div>
+        <button class="btn btn-mini" id="imprimir">Imprimir / PDF</button>
       </div>
-      <button class="btn btn-mini" id="imprimir">Imprimir / PDF</button>`)}
+    </div>
 
     <div class="numeros">
       <div class="numero-bloco"><span class="rotulo">Novas</span><div class="numero">${numero(r.total.novas)}</div></div>
@@ -334,6 +520,32 @@ async function relatorios() {
       conta cinco vezes em "para acompanhar". É a carga de trabalho, não a quantidade
       de propostas distintas.
     </p>
+
+    <div style="padding-top:38px">
+      <div class="secao">Como o período fechou (quantidade e R$)</div>
+      <table>
+        <thead><tr>
+          <th>Etapa</th><th class="num">Quantidade</th><th class="num">Valor</th>
+        </tr></thead>
+        <tbody>
+          ${r.panorama.por_etapa.map((e) => `
+            <tr>
+              <td>${esc(e.nome)}</td>
+              <td class="num">${numero(e.quantidade)}</td>
+              <td class="num">${moeda(e.valor)}</td>
+            </tr>`).join("")}
+          <tr>
+            <td><strong>Total</strong></td>
+            <td class="num"><strong>${numero(r.panorama.total.quantidade)}</strong></td>
+            <td class="num"><strong>${moeda(r.panorama.total.valor)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="dica" style="margin-top:10px">
+        Implantada e cancelada usam a data em que a proposta entrou naquela etapa; as demais
+        usam a data de emissão — é o desfecho das propostas nascidas neste período.
+      </p>
+    </div>
 
     <div style="padding-top:38px">
       <div class="secao">Desempenho por ADM</div>
@@ -395,24 +607,24 @@ async function relatorios() {
   $("#imprimir").addEventListener("click", () => window.print());
 }
 
-// ============================================================ 8. USUÁRIOS
+// --------------------------------------------------------- 5c. Usuários
 
 async function usuarios() {
   const lista = await api.usuarios();
 
-  alvo().innerHTML = `
-    ${cabecalhoTela("Usuários", `${lista.filter((u) => u.ativo).length} ativos`,
-      estado.masterAberto ? `
+  $("#master-corpo").innerHTML = `
+    <div class="tela-topo" style="padding-top:6px">
+      <div class="secao" style="border:none;padding:0;margin:0">Usuários · ${lista.filter((u) => u.ativo).length} ativos</div>
+      <div class="direita">
         <input id="novo-usuario" class="campo" placeholder="Nome da ADM" style="width:180px">
-        <button class="btn btn-cheio btn-mini" id="add-usuario">Cadastrar</button>` : "")}
-
-    ${!estado.masterAberto ? `<p class="dica" style="margin:-8px 0 22px">
-      Só o Master cadastra e desativa usuários.</p>` : ""}
+        <button class="btn btn-cheio btn-mini" id="add-usuario">Cadastrar</button>
+      </div>
+    </div>
 
     <table>
       <thead><tr>
         <th>Nome</th><th class="num">Propostas</th><th class="num">Em aberto</th>
-        <th>Situação</th>${estado.masterAberto ? "<th></th>" : ""}
+        <th>Situação</th><th></th>
       </tr></thead>
       <tbody>
         ${lista.map((u) => `
@@ -421,18 +633,17 @@ async function usuarios() {
             <td class="num">${numero(u.total)}</td>
             <td class="num">${numero(u.abertas)}</td>
             <td class="${u.ativo ? "" : "apagado"}">${u.ativo ? "ativa" : "desativada"}</td>
-            ${estado.masterAberto ? `<td class="num">
+            <td class="num">
               <button class="btn btn-mini" data-alternar="${u.id}" data-ativo="${u.ativo}">
                 ${u.ativo ? "desativar" : "reativar"}
-              </button></td>` : ""}
+              </button></td>
           </tr>`).join("")}
       </tbody>
     </table>
     <p class="dica" style="margin-top:16px">
-      Desativar não apaga nada: a ADM sai do seletor, mas continua no histórico e nos relatórios.
+      Só o Master cadastra e desativa usuários. Desativar não apaga nada: a ADM sai do
+      seletor, mas continua no histórico e nos relatórios.
     </p>`;
-
-  if (!estado.masterAberto) return;
 
   $("#add-usuario").addEventListener("click", async () => {
     const nome = $("#novo-usuario").value.trim();
@@ -454,64 +665,54 @@ async function usuarios() {
   }));
 }
 
-// ============================================================== 9. MASTER
+// -------------------------------------------------------- 5d. Corretores
 
-async function master() {
-  if (!estado.masterAberto) return telaTrancada("Área Master");
+async function corretores() {
+  const lista = estado.config.corretores_cadastro || [];
+  const porSupervisor = new Map();
+  for (const c of lista) {
+    const chave = c.supervisor_nome || "sem supervisor";
+    if (!porSupervisor.has(chave)) porSupervisor.set(chave, []);
+    porSupervisor.get(chave).push(c);
+  }
 
-  const p = await api.master.produtividade();
+  $("#master-corpo").innerHTML = `
+    <div class="secao" style="margin-top:6px">Subir carteira (CSV)</div>
+    <p class="dica" style="margin:0 0 12px">
+      Uma linha por corretor: <span class="mono">corretor,supervisor</span>. Corretor que já existe
+      tem o supervisor atualizado — é assim que se corrige um vínculo errado.
+    </p>
+    <textarea id="csv-corretores" class="campo" style="min-height:110px" placeholder="GUILHERME AUGUSTO,LARISSA&#10;MARISTELA,LUCAS SP"></textarea>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:10px">
+      <input type="file" id="csv-arquivo" accept=".csv,text/csv" class="campo" style="width:auto">
+      <button class="btn btn-cheio btn-mini" id="csv-enviar">Importar</button>
+    </div>
 
-  alvo().innerHTML = `
-    ${cabecalhoTela("Área Master", data(p.dia), `
-      <button class="btn btn-mini" id="sair-master">Sair</button>`)}
-
-    ${p.sem_responsavel ? `
-      <div class="filtros-barra" style="border-bottom:1px solid rgb(var(--fio))">
-        <span style="color:rgb(var(--alerta))">
-          ${p.sem_responsavel} proposta${p.sem_responsavel === 1 ? "" : "s"} sem ADM responsável
-        </span>
-        <button class="btn btn-mini" data-ir="alertas">Distribuir</button>
-      </div>` : ""}
-
-    <div style="padding-top:26px">
-      <div class="secao">Produtividade de hoje</div>
-      <table>
-        <thead><tr>
-          <th>ADM</th><th class="num">Novas</th><th class="num">Para acompanhar</th>
-          <th class="num">Acompanhadas</th><th class="num">Pendentes</th>
-          <th class="num">Atrasadas</th><th class="num">Críticas</th><th class="num">Taxa</th>
-        </tr></thead>
-        <tbody>
-          ${p.usuarios.map((u) => `
-            <tr data-usuario="${u.usuario_id}" style="cursor:pointer">
-              <td>${esc(u.usuario)}</td>
-              <td class="num">${numero(u.novas)}</td>
-              <td class="num">${numero(u.para_acompanhar)}</td>
-              <td class="num">${numero(u.acompanhadas)}</td>
-              <td class="num">${numero(u.pendentes)}</td>
-              <td class="num" ${u.atrasadas ? 'style="color:rgb(var(--alerta))"' : ""}>${numero(u.atrasadas)}</td>
-              <td class="num" ${u.criticas ? 'style="color:rgb(var(--alerta))"' : ""}>${numero(u.criticas)}</td>
-              <td class="num">${barraTaxa(u.taxa, u.para_acompanhar)}</td>
-            </tr>`).join("")}
-        </tbody>
-      </table>
-      <p class="dica" style="margin-top:14px">Clique numa ADM para ver o histórico diário dela.</p>
+    <div style="padding-top:34px">
+      <div class="secao">Carteira atual · ${numero(lista.length)} corretores</div>
+      ${[...porSupervisor.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([sup, corr]) => `
+        <div style="margin-bottom:22px">
+          <div class="rotulo">${esc(sup)} · ${corr.length}</div>
+          <div class="linha-meta" style="font-size:12.5px">${corr.map((c) => esc(c.nome)).join(" · ")}</div>
+        </div>`).join("") || listaVazia("Nenhum corretor cadastrado ainda.")}
     </div>`;
 
-  $("#sair-master").addEventListener("click", async () => {
-    await api.master.sair();
-    estado.masterAberto = false;
-    avisar("Você saiu da Área Master.");
-    redesenhar();
+  $("#csv-arquivo").addEventListener("change", async (e) => {
+    const arq = e.target.files?.[0];
+    if (!arq) return;
+    $("#csv-corretores").value = await arq.text();
   });
 
-  $$("[data-usuario]").forEach((tr) => tr.addEventListener("click", () => {
-    estado.usuario = tr.dataset.usuario;
-    $("#usuario").value = tr.dataset.usuario;
-    irPara("acompanhamento");
-  }));
-
-  $$("[data-ir]").forEach((b) => b.addEventListener("click", () => irPara(b.dataset.ir)));
+  $("#csv-enviar").addEventListener("click", async () => {
+    const csv = $("#csv-corretores").value.trim();
+    if (!csv) return;
+    try {
+      const r = await api.master.corretoresCSV(csv);
+      await recarregarConfig();
+      avisar(`${r.importados} corretor(es) novos · ${r.atualizados} atualizado(s).`);
+      redesenhar();
+    } catch (erro) { avisar(erro.message, "erro"); }
+  });
 }
 
 /** Tela protegida: pede a senha do Master. */

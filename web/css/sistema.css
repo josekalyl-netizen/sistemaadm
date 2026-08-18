@@ -24,12 +24,11 @@
   flex-wrap: nowrap;
 }
 
-.marca { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
-.marca-w3g {
-  font-family: "Instrument Serif", Georgia, serif;
-  font-size: 20px;
-  letter-spacing: .04em;
-}
+.marca { display: flex; align-items: center; gap: 12px; min-width: 0; }
+/* logo flutuante: PNG com fundo transparente, sem caixa nem borda ao redor */
+.marca-logo { height: 30px; width: auto; display: block; flex-shrink: 0; }
+/* a logo é tinta azul-marinho — no tema escuro vira silhueta clara, senão some no fundo quase preto */
+:root[data-tema="escuro"] .marca-logo { filter: brightness(0) invert(1) opacity(.92); }
 .marca-nome {
   font-size: 10px;
   text-transform: uppercase;

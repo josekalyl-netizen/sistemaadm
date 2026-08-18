@@ -43,15 +43,19 @@ Cadastro, busca, filtros e etapas. Os campos são os da planilha:
 | Campo | Vem de |
 |---|---|
 | Empresa · CNPJ/CPF · Proposta · Operadora | colunas da planilha |
-| Corretor | quem trouxe o negócio (texto livre) |
+| Corretor | escolhido da carteira cadastrada pelo Master (Master → Corretores) |
 | **Responsável ADM** | quem acompanha aqui dentro (lista de usuários) |
 | Valor · Emissão · Validade · Cadastrado · Observações | colunas da planilha |
 | Etapa | SITUAÇÃO, traduzida (ver tabela adiante) |
-| Supervisor | nome do arquivo da planilha |
+| Supervisor | preenchido sozinho a partir do corretor escolhido |
 
 **Corretor e Responsável ADM são coisas diferentes** e vivem em campos
-separados. A proposta pode ser cadastrada sem ADM — nesse caso cai na fila
-*sem responsável*, que aparece em Alertas para o Master distribuir.
+separados. Empresa, CNPJ/CPF, corretor, operadora, responsável ADM, valor e
+emissão são obrigatórios — sem eles o cadastro não é liberado.
+
+O supervisor de cada corretor é cadastrado só pelo Master, por um CSV
+`corretor,supervisor` (tela Master → Corretores). Ao escolher o corretor no
+cadastro, o supervisor já vem junto — sem precisar perguntar de novo.
 
 ### 2 · Acompanhamento
 
@@ -115,8 +119,11 @@ SENHA_MASTER='suasenha' npm start
 
 ## As telas
 
-Dashboard · Propostas · Pendentes · Alertas · Implantadas · Acompanhamento ·
-Relatórios · Usuários · Master
+Propostas (com o painel do dia e o cenário do mês no topo) · Pendentes ·
+Alertas · Implantadas · Master.
+
+Dentro da Área Master: Visão geral, Acompanhamento, Relatórios, Usuários e
+Corretores.
 
 No topo, dois controles mandam no sistema inteiro:
 
@@ -124,7 +131,8 @@ No topo, dois controles mandam no sistema inteiro:
   `Todos` mostra a operação inteira; `Sem responsável` isola o que ninguém está
   acompanhando.
 - **Busca** — acha a proposta em qualquer etapa, por empresa, CNPJ, número da
-  proposta, corretor, operadora ou responsável. Atalho: tecla `/`.
+  proposta, corretor, operadora ou responsável. Só aparece em Propostas e
+  Implantadas, que é onde há propostas para achar. Atalho: tecla `/`.
 
 O estado da tela vai para o endereço, então dá para salvar nos favoritos ou
 mandar o link para um colega.

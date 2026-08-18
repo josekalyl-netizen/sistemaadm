@@ -9,7 +9,7 @@ import { $, $$, aguardar, api, avisar, esc, numero } from "./util.js";
 import {
   escreverEndereco, estado, lerEndereco, recarregarConfig,
 } from "./estado.js";
-import { TELAS, ligarNavegacao } from "./telas.js";
+import { TELAS, TELAS_COM_BUSCA, ligarNavegacao } from "./telas.js";
 import { abrirFicha, iniciarFicha } from "./ficha.js";
 import { abrirCadastro, iniciarCadastro } from "./cadastro.js";
 
@@ -54,8 +54,8 @@ function montarTopo() {
   $("#busca").addEventListener("input", aguardar(() => {
     estado.filtros.busca = $("#busca").value.trim();
     estado.filtros.pagina = 1;
-    // buscar leva para a lista completa: é onde a busca faz sentido
-    if (estado.filtros.busca && estado.tela === "dashboard") estado.tela = "propostas";
+    // buscar só faz sentido onde aparecem propostas — leva para lá
+    if (estado.filtros.busca && !TELAS_COM_BUSCA.includes(estado.tela)) estado.tela = "propostas";
     redesenhar();
   }));
 
@@ -102,8 +102,9 @@ function irPara(tela) {
 async function redesenhar() {
   escreverEndereco();
   desenharAbas();
+  atualizarBusca();
 
-  const tela = TELAS[estado.tela] || TELAS.dashboard;
+  const tela = TELAS[estado.tela] || TELAS.propostas;
   try {
     await tela.desenhar();
   } catch (erro) {
@@ -112,6 +113,12 @@ async function redesenhar() {
   }
 
   atualizarContagens();
+}
+
+/** A busca de empresa/CNPJ só faz sentido onde aparecem propostas. */
+function atualizarBusca() {
+  const cabe = TELAS_COM_BUSCA.includes(estado.tela);
+  $(".busca").classList.toggle("oculto", !cabe);
 }
 
 /** Números das abas Pendentes e Alertas — sempre do usuário selecionado. */

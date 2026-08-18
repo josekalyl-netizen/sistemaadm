@@ -30,6 +30,19 @@ CREATE TABLE IF NOT EXISTS supervisores (
   criado_em  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Carteira de corretores por supervisor. Cadastrada só pelo Master (upload de
+-- CSV "corretor,supervisor"); sem dado sensível, só o vínculo. É o que
+-- preenche sozinho o supervisor no cadastro de proposta quando a ADM escolhe
+-- o corretor.
+CREATE TABLE IF NOT EXISTS corretores (
+  id            INTEGER PRIMARY KEY,
+  nome          TEXT NOT NULL UNIQUE,
+  supervisor_id INTEGER REFERENCES supervisores(id),
+  ativo         INTEGER NOT NULL DEFAULT 1,
+  criado_em     TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS ix_corretores_supervisor ON corretores(supervisor_id);
+
 -- As ADMs que acompanham as propostas (e o Master). Cadastradas na tela
 -- Usuários; é esta lista que alimenta o campo "Responsável ADM".
 CREATE TABLE IF NOT EXISTS usuarios (
@@ -70,6 +83,7 @@ CREATE TABLE IF NOT EXISTS propostas (
   ultima_verificacao TEXT,                        -- datetime da última verificação
   verificada_por    INTEGER REFERENCES usuarios(id),
   implantada_em     TEXT,                         -- data em que entrou em "Implantada"
+  cancelada_em      TEXT,                         -- data em que entrou em "Cancelada"
 
   -- rastro da planilha de origem
   situacao_origem   TEXT NOT NULL DEFAULT '',     -- SITUAÇÃO como estava escrita
@@ -176,8 +190,26 @@ export function abrirBanco() {
   }
 
   db.exec(ESQUEMA);
+  migrarColunasNovas(db);
   bancoAberto = db;
   return db;
+}
+
+/**
+ * Colunas novas em banco já existente — SEMPRE por ALTER TABLE, nunca por
+ * recriação: ao contrário de `precisaRecriar`, este banco já tem propostas
+ * reais cadastradas à mão, verificações e histórico que não estão em
+ * nenhuma planilha. Perder isso não é uma opção.
+ */
+function migrarColunasNovas(db) {
+  const colunas = db.prepare("PRAGMA table_info(propostas)").all().map((c) => c.name);
+  if (!colunas.includes("cancelada_em")) {
+    db.exec("ALTER TABLE propostas ADD COLUMN cancelada_em TEXT");
+    // aproximação: para o que já estava cancelado, usa a data da proposta —
+    // não é a data real do cancelamento, mas é melhor do que ficar nulo e
+    // nunca entrar no valor "cancelado no mês" de nenhum relatório.
+    db.exec("UPDATE propostas SET cancelada_em = data_proposta WHERE status_atual = 'cancelada' AND cancelada_em IS NULL");
+  }
 }
 
 /** true quando a tabela de propostas existe mas é de um esquema antigo. */

@@ -16,7 +16,7 @@
  */
 
 import { preparar, registrarHistorico } from "./banco.js";
-import { NIVEIS, diasEntre, etapa, hoje, texto } from "./dominio.js";
+import { ETAPAS, NIVEIS, diasEntre, etapa, hoje, texto } from "./dominio.js";
 
 const agora = () => new Date().toISOString().slice(0, 19).replace("T", " ");
 
@@ -133,6 +133,69 @@ export function situacaoAtual(db, { usuario_id = null } = {}) {
       ? Math.round((linha.acompanhadas / linha.para_acompanhar) * 1000) / 10
       : 100,
   };
+}
+
+/**
+ * Cenário do mês, em R$: quanto está em cada etapa agora, mais o que foi
+ * implantado e cancelado NESTE mês. As etapas em aberto são "quanto há
+ * agora"; implantado/cancelado são "quanto virou isso desde o dia 1º" — por
+ * isso viram automaticamente quando o mês muda, sem precisar zerar nada.
+ */
+export function valoresPainel(db, { usuario_id = null } = {}) {
+  const dia = hoje();
+  const inicioMes = `${dia.slice(0, 7)}-01`;
+  const { onde, args } = filtroUsuario(usuario_id);
+  const e = (onde ? `${onde} AND` : "WHERE");
+
+  const somar = (condicao, extra = {}) => preparar(db, `
+    SELECT COALESCE(SUM(p.valor), 0) AS total, COUNT(*) AS quantidade
+    FROM propostas p ${e} ${condicao}
+  `).get({ ...args, ...extra });
+
+  return {
+    dia,
+    para_acompanhar: somar(`p.status_atual IN (${ETAPAS_COM_PRAZO})`),
+    em_analise: somar(`p.status_atual = 'em_analise'`),
+    cotacao: somar(`p.status_atual = 'cotacao'`),
+    enviada: somar(`p.status_atual = 'enviada'`),
+    pendente: somar(`p.status_atual = 'pendente'`),
+    em_implantacao: somar(`p.status_atual = 'em_implantacao'`),
+    implantado_mes: somar(`p.status_atual = 'implantada' AND p.implantada_em >= :inicioMes`, { inicioMes }),
+    cancelado_mes: somar(`p.status_atual = 'cancelada' AND p.cancelada_em >= :inicioMes`, { inicioMes }),
+  };
+}
+
+/**
+ * Painel de fechamento do mês para o Master: por etapa, quantidade e valor.
+ * Implantada/cancelada usam a data em que entraram naquela etapa; as demais
+ * usam a data de emissão — é "como terminaram as propostas nascidas nesse
+ * período", a leitura que faz sentido para um mês que já passou.
+ */
+export function panoramaMes(db, { inicio, fim, usuario_id = null } = {}) {
+  const { onde, args } = filtroUsuario(usuario_id);
+  const e = (onde ? `${onde} AND` : "WHERE");
+
+  const linhas = ETAPAS.map((et) => {
+    const condicao = et.codigo === "implantada"
+      ? `p.status_atual = 'implantada' AND p.implantada_em BETWEEN :inicio AND :fim`
+      : et.codigo === "cancelada"
+        ? `p.status_atual = 'cancelada' AND p.cancelada_em BETWEEN :inicio AND :fim`
+        : `p.status_atual = '${et.codigo}' AND p.data_proposta BETWEEN :inicio AND :fim`;
+
+    const r = preparar(db, `
+      SELECT COUNT(*) AS quantidade, COALESCE(SUM(p.valor), 0) AS valor
+      FROM propostas p ${e} ${condicao}
+    `).get({ ...args, inicio, fim });
+
+    return { codigo: et.codigo, nome: et.nome, quantidade: r.quantidade, valor: r.valor };
+  });
+
+  const total = linhas.reduce((acc, l) => ({
+    quantidade: acc.quantidade + l.quantidade,
+    valor: acc.valor + l.valor,
+  }), { quantidade: 0, valor: 0 });
+
+  return { inicio, fim, por_etapa: linhas, total };
 }
 
 /** WHERE por responsável. "sem" = propostas sem ADM vinculada. */
@@ -390,6 +453,7 @@ export function relatorio(db, { periodo = "semana", de, ate, usuario_id = null }
       criticas: agoraMesmo.criticas,
       pendentes: agoraMesmo.pendentes,
     },
+    panorama: panoramaMes(db, { inicio, fim, usuario_id }),
   };
 }
 

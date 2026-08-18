@@ -64,6 +64,7 @@ export function linhaParaProposta(linha, contexto) {
     situacao_origem: situacao,
     responsavel: texto(linha.responsavel).toUpperCase(),
     implantada_em: status === "implantada" ? lerData(linha.emissao) : null,
+    cancelada_em: status === "cancelada" ? lerData(linha.emissao) : null,
 
     // A proposta entrou na operação na data de emissão, não no dia em que a
     // planilha foi importada — senão o histórico diário começaria com 2 mil
@@ -114,7 +115,7 @@ const CAMPOS = [
   "supervisor_id", "usuario_id", "responsavel", "razao_social", "documento", "documento_exibido",
   "numero_proposta", "operadora", "corretor", "valor", "data_proposta",
   "data_validade", "cadastrado", "observacoes", "status_atual", "pendencia_tipo",
-  "pendencia_detalhe", "implantada_em", "situacao_origem", "origem_arquivo",
+  "pendencia_detalhe", "implantada_em", "cancelada_em", "situacao_origem", "origem_arquivo",
   "origem_aba", "chave_natural", "busca", "criado_em", "ultima_verificacao",
 ];
 

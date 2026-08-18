@@ -5,7 +5,7 @@
  * mensagem para o corretor. Tudo o que ela faz aqui vira histórico sozinho.
  */
 
-import { $, $$, api, avisar, corRGB, data, dataHora, esc, moeda } from "./util.js";
+import { $, $$, api, avisar, corRGB, data, dataHora, esc, ligarMascaraDocumento, ligarMascaraMoeda, moeda, valorParaCampo } from "./util.js";
 import { estado, etapaDe, nivelDe } from "./estado.js";
 
 let atual = null;
@@ -100,39 +100,31 @@ function blocoVerificacao(p) {
 }
 
 function blocoEtapa(p) {
-  const botoes = estado.config.etapas.map((e) => `
+  const botoes = estado.config.etapas.map((e) => {
+    const atual = e.codigo === p.status_atual;
+    return `
     <button data-etapa="${e.codigo}" style="--cor:${corRGB(e.cor)}"
-            class="${e.codigo === p.status_atual ? "atual" : ""}" title="${esc(e.descricao)}">
-      <i class="ponto" style="--cor:${corRGB(e.cor)}"></i>${esc(e.nome)}
-    </button>`).join("");
+            class="${atual ? "atual" : ""}" title="${esc(e.descricao)}">
+      <i class="ponto" style="--cor:${corRGB(e.cor)}"></i>${esc(e.nome)}${atual ? " · atual" : ""}
+    </button>`;
+  }).join("");
 
   return `
     <section class="ficha-secao">
-      <div class="secao">Etapa</div>
+      <div class="secao">Atualize a etapa (ou mantenha a atual)</div>
       <div class="trocador">${botoes}</div>
     </section>`;
 }
 
 function blocoPendencia(p) {
   if (p.status_atual !== "pendente") return "";
-  const opcoes = estado.config.tipos_pendencia
-    .map((t) => `<option value="${esc(t)}" ${t === p.pendencia_tipo ? "selected" : ""}>${esc(t)}</option>`)
-    .join("");
 
   return `
     <section class="ficha-secao">
       <div class="secao">Pendência</div>
-      <div class="grade">
-        <div>
-          <label class="rotulo" for="pend-tipo">Qual é a pendência?</label>
-          <select id="pend-tipo" class="campo"><option value="">—</option>${opcoes}</select>
-        </div>
-        <div>
-          <label class="rotulo" for="pend-detalhe">Detalhe</label>
-          <input id="pend-detalhe" class="campo" value="${esc(p.pendencia_detalhe)}"
-                 placeholder="o que está faltando">
-        </div>
-      </div>
+      <label class="rotulo" for="pend-detalhe">O que a operadora retornou</label>
+      <input id="pend-detalhe" class="campo" value="${esc(p.pendencia_detalhe)}"
+             placeholder="descreva a pendência">
       <button class="btn btn-mini" id="salvar-pendencia" style="margin-top:12px">Salvar pendência</button>
     </section>`;
 }
@@ -187,7 +179,7 @@ function blocoDados(p) {
           <label class="rotulo" for="ed-usuario">Responsável ADM</label>
           <select id="ed-usuario" class="campo editavel" data-campo="usuario_id">${admOpcoes}</select>
         </div>
-        ${campo("Valor (R$)", "valor", p.valor ?? "")}
+        ${campo("Valor (R$)", "valor", valorParaCampo(p.valor))}
         ${campo("Emissão", "data_proposta", p.data_proposta ?? "", "date")}
         ${campo("Validade", "data_validade", p.data_validade ?? "", "date")}
         ${campo("Cadastrado", "cadastrado", p.cadastrado)}
@@ -239,6 +231,9 @@ function ligarEventos() {
 
   $("#salvar-ficha").addEventListener("click", salvarCampos);
 
+  ligarMascaraMoeda($("#ed-valor"));
+  ligarMascaraDocumento($("#ed-documento"));
+
   corpo.querySelectorAll(".editavel").forEach((c) => {
     c.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && c.tagName !== "TEXTAREA") { e.preventDefault(); salvarCampos(); }
@@ -282,7 +277,6 @@ async function salvarPendencia() {
   try {
     await recarregar(await api.status(atual.id, {
       status: "pendente",
-      pendencia_tipo: $("#pend-tipo").value,
       pendencia_detalhe: $("#pend-detalhe").value,
       autor: nomeDoAutor(),
     }), "Pendência atualizada.");
