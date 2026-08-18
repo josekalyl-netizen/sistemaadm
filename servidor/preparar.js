@@ -14,7 +14,7 @@
 
 import { abrirBanco, bancoFoiRecriado } from "./banco.js";
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -90,6 +90,27 @@ function procurarPlanilhas() {
   return null;
 }
 
+/**
+ * Quantas linhas de planilha o JSON já convertido tem.
+ * Devolve -1 quando ele não existe ou está corrompido.
+ *
+ * Um JSON com 0 linhas é pior do que nenhum: foi uma conversão que não deu em
+ * nada (um .xlsx que não era planilha de supervisor, por exemplo) e, se a gente
+ * confiar nele, ele bloqueia toda tentativa seguinte de achar as planilhas
+ * certas — o sistema sobe vazio para sempre sem dizer por quê.
+ */
+function linhasNoJson() {
+  if (!existsSync(JSON_PLANILHAS)) return -1;
+  try {
+    const bruto = JSON.parse(readFileSync(JSON_PLANILHAS, "utf8"));
+    return (bruto.arquivos || [])
+      .flatMap((a) => a.abas || [])
+      .reduce((soma, aba) => soma + (aba.registros?.length || 0), 0);
+  } catch {
+    return -1;
+  }
+}
+
 /** Qual comando do Python existe nesta máquina. */
 function acharPython() {
   for (const cmd of ["python3", "python", "py"]) {
@@ -145,8 +166,19 @@ export async function prepararSePreciso() {
 
   log("\n  Primeira execução — preparando o sistema.");
 
-  // 1. o JSON já existe? então é só importar
-  if (!existsSync(JSON_PLANILHAS)) {
+  // 1. converter as planilhas — a não ser que já exista um JSON aproveitável.
+  //
+  // "Aproveitável" é ter linhas de verdade. E, se a pessoa apontou a pasta na
+  // mão (PLANILHAS=...), a vontade dela ganha do que estiver convertido: foi
+  // justamente para trocar de planilha que ela passou o caminho.
+  const jaConvertidas = linhasNoJson();
+  if (jaConvertidas > 0 && !process.env.PLANILHAS) {
+    log(`  usando a conversão que já existe (${jaConvertidas} linhas).`);
+    log("  Para reler os arquivos .xlsx: apague dados/planilhas.json e rode de novo.");
+  } else {
+    if (jaConvertidas === 0) {
+      log("  a conversão anterior ficou vazia — vou procurar as planilhas de novo.");
+    }
     const encontradas = procurarPlanilhas();
     if (!encontradas) {
       log("\n  Não achei nenhuma planilha .xlsx. Procurei em:");
@@ -180,6 +212,13 @@ export async function prepararSePreciso() {
       converterPlanilhas(python, encontradas.achados);
     } catch (erro) {
       log(`\n  Falha ao ler as planilhas: ${erro.message}\n`);
+      return false;
+    }
+
+    if (linhasNoJson() <= 0) {
+      log("\n  Li os arquivos, mas nenhum tinha o cabeçalho de planilha de");
+      log("  supervisor (a coluna \"NOME DA ESTIPULANTE\").");
+      log("  Confira se são mesmo as planilhas dos supervisores.\n");
       return false;
     }
   }
