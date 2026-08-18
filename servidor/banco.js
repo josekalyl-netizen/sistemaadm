@@ -304,6 +304,12 @@ export function preparar(db, sql) {
  *     corrige o nome. Nunca se apaga linha: a proposta é o dado, não o
  *     cadastro, e duas propostas do mesmo corretor são normais.
  */
+const DEPENDENTES = {
+  supervisores: [["corretores", "supervisor_id"], ["propostas", "supervisor_id"]],
+  usuarios: [["propostas", "usuario_id"], ["propostas", "verificada_por"], ["verificacoes", "usuario_id"]],
+  corretores: [],
+};
+
 function limparAspasDosNomes(db) {
   const ASPAS = ['"', "'", "\u2018", "\u2019", "\u201c", "\u201d"];
   const onde = (coluna) => ASPAS.map(() => `${coluna} LIKE ?`).join(" OR ");
@@ -315,8 +321,18 @@ function limparAspasDosNomes(db) {
       const limpo = nomeLimpo(v).toUpperCase();
       if (!limpo || limpo === v) continue;
       const jaExiste = db.prepare(`SELECT id FROM ${tabela} WHERE ${coluna} = ? AND id <> ?`).get(limpo, id);
-      if (jaExiste) db.prepare(`DELETE FROM ${tabela} WHERE id = ?`).run(id);
-      else db.prepare(`UPDATE ${tabela} SET ${coluna} = ? WHERE id = ?`).run(limpo, id);
+      if (!jaExiste) {
+        db.prepare(`UPDATE ${tabela} SET ${coluna} = ? WHERE id = ?`).run(limpo, id);
+        continue;
+      }
+      // O duplicado sujo e o limpo sao a mesma pessoa, entao quem apontava para
+      // um passa a apontar para o outro ANTES da linha sumir. Sem isto o SQLite
+      // recusa o DELETE (FOREIGN KEY constraint failed) e o sistema nao sobe --
+      // e apagar assim mesmo seria pior: a proposta perderia o supervisor.
+      for (const [filha, fk] of DEPENDENTES[tabela]) {
+        db.prepare(`UPDATE ${filha} SET ${fk} = ? WHERE ${fk} = ?`).run(jaExiste.id, id);
+      }
+      db.prepare(`DELETE FROM ${tabela} WHERE id = ?`).run(id);
     }
   }
 
