@@ -159,6 +159,7 @@ async function rotaApi(req, res, url) {
       const escolhida = escolherMensagem(db, proposta, {
         pendencia: filtros.pendencia || "",
         indice: filtros.indice === undefined ? null : Number(filtros.indice),
+        canal: filtros.canal === "email" ? "email" : "whatsapp",
       });
       if (!escolhida) throw new ErroDeUso("Não há mensagem para esta etapa.", 404);
       return escolhida;
@@ -166,7 +167,7 @@ async function rotaApi(req, res, url) {
     // POST = a ADM copiou; registra para não repetir com o mesmo corretor
     if (metodo === "POST") {
       const corpo = await lerCorpo(req);
-      registrarUso(db, proposta, corpo.indice);
+      registrarUso(db, proposta, corpo.indice, corpo.canal);
       return { registrado: true };
     }
   }

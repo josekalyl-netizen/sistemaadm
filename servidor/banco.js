@@ -85,6 +85,9 @@ CREATE TABLE IF NOT EXISTS propostas (
   implantada_em     TEXT,                         -- data em que entrou em "Implantada"
   cancelada_em      TEXT,                         -- data em que entrou em "Cancelada"
 
+  -- marca permanente: a proposta foi emitida pelo próprio corretor
+  emitida_pelo_corretor INTEGER NOT NULL DEFAULT 0,
+
   -- rastro da planilha de origem
   situacao_origem   TEXT NOT NULL DEFAULT '',     -- SITUAÇÃO como estava escrita
   origem_arquivo    TEXT NOT NULL DEFAULT '',
@@ -158,9 +161,20 @@ CREATE TABLE IF NOT EXISTS mensagens_uso (
   etapa        TEXT NOT NULL,
   indice       INTEGER NOT NULL,
   proposta_id  INTEGER,
+  canal        TEXT NOT NULL DEFAULT 'whatsapp',   -- 'whatsapp' ou 'email'
   quando       TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS ix_msg_uso ON mensagens_uso(corretor, etapa, id DESC);
+
+/* ---------------------------------------------------------------- 8. configuração
+   Decisões do próprio sistema que precisam sobreviver ao reinício. Hoje só
+   guarda se a importação automática das planilhas continua valendo: depois de
+   zerar o banco de propósito, um banco vazio não pode ser confundido com
+   "primeira execução" e reimportar tudo de volta. */
+CREATE TABLE IF NOT EXISTS configuracao (
+  chave TEXT PRIMARY KEY,
+  valor TEXT NOT NULL
+);
 `;
 
 let bancoAberto = null;
@@ -202,7 +216,16 @@ export function abrirBanco() {
  * nenhuma planilha. Perder isso não é uma opção.
  */
 function migrarColunasNovas(db) {
+  const usoMsg = db.prepare("PRAGMA table_info(mensagens_uso)").all().map((c) => c.name);
+  if (!usoMsg.includes("canal")) {
+    // o que já foi usado até aqui era tudo WhatsApp — o padrão da coluna já diz isso
+    db.exec("ALTER TABLE mensagens_uso ADD COLUMN canal TEXT NOT NULL DEFAULT 'whatsapp'");
+  }
+
   const colunas = db.prepare("PRAGMA table_info(propostas)").all().map((c) => c.name);
+  if (!colunas.includes("emitida_pelo_corretor")) {
+    db.exec("ALTER TABLE propostas ADD COLUMN emitida_pelo_corretor INTEGER NOT NULL DEFAULT 0");
+  }
   if (!colunas.includes("cancelada_em")) {
     db.exec("ALTER TABLE propostas ADD COLUMN cancelada_em TEXT");
     // aproximação: para o que já estava cancelado, usa a data da proposta —

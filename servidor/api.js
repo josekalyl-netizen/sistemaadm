@@ -11,7 +11,7 @@
 
 import {
   CODIGOS_ETAPA, ETAPAS, NIVEIS, TIPOS_PENDENCIA, etapa, formatarDocumento,
-  hoje, lerData, lerValor, normalizar, somenteDigitos, texto, validarDocumento,
+  hoje, lerData, lerValor, normalizar, somenteDigitos, texto, validarDocumento, verdadeiro,
 } from "./dominio.js";
 import { preparar, registrarHistorico, supervisorPorNome, usuarioPorNome } from "./banco.js";
 import { SQL_DIAS_SEM_VERIFICAR, SQL_NIVEL, verificacoesDaProposta } from "./acompanhamento.js";
@@ -26,7 +26,13 @@ export class ErroDeUso extends Error {
 
 const agora = () => new Date().toISOString().slice(0, 19).replace("T", " ");
 
-/** Campos que o usuário pode editar na ficha. */
+/**
+ * Campos que o usuário pode editar na ficha.
+ *
+ * `emitida_pelo_corretor` fica FORA de propósito: é a origem da proposta,
+ * decidida no cadastro, e vale para sempre. Deixar editável transformaria um
+ * fato em opinião.
+ */
 const EDITAVEIS = [
   "razao_social", "numero_proposta", "operadora", "corretor", "responsavel",
   "valor", "data_proposta", "data_validade", "cadastrado", "observacoes",
@@ -271,6 +277,9 @@ export function criarProposta(db, entrada, autor = "operacional") {
     data_validade: lerData(entrada.data_validade),
     cadastrado: texto(entrada.cadastrado).toUpperCase(),
     observacoes: texto(entrada.observacoes),
+    // Marca permanente, decidida no cadastro: quem emitiu a proposta foi o
+    // próprio corretor. Não é etapa nem status — é origem, e origem não muda.
+    emitida_pelo_corretor: verdadeiro(entrada.emitida_pelo_corretor) ? 1 : 0,
     status_atual: status,
     pendencia_tipo: status === "pendente" ? texto(entrada.pendencia_tipo) : "",
     pendencia_detalhe: status === "pendente" ? texto(entrada.pendencia_detalhe) : "",
@@ -308,7 +317,8 @@ export function criarProposta(db, entrada, autor = "operacional") {
     tipo: "criacao",
     para: status,
     descricao: `Proposta cadastrada em "${etapa(status).nome}"`
-      + (adm ? ` · responsável ${adm.nome}` : " · SEM RESPONSÁVEL ADM"),
+      + (adm ? ` · responsável ${adm.nome}` : " · SEM RESPONSÁVEL ADM")
+      + (proposta.emitida_pelo_corretor ? " · emitida pelo corretor" : ""),
     autor,
   });
   return obterProposta(db, id);

@@ -81,6 +81,17 @@ export const TIPOS_PENDENCIA = [
 
 // ---------------------------------------------------------------- utilidades
 
+/**
+ * Marcação de caixa de seleção, venha de onde vier: o formulário manda `true`,
+ * o JSON pode mandar "1", "sim" ou "on". Qualquer outra coisa é "não marcado" —
+ * inclusive string vazia e null.
+ */
+export function verdadeiro(valor) {
+  if (valor === true || valor === 1) return true;
+  const t = String(valor ?? "").trim().toLowerCase();
+  return t === "1" || t === "true" || t === "sim" || t === "on";
+}
+
 export function texto(valor) {
   return String(valor ?? "").replace(/\s+/g, " ").trim();
 }

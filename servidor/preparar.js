@@ -13,6 +13,7 @@
  */
 
 import { abrirBanco, bancoFoiRecriado } from "./banco.js";
+import { importacaoAutomaticaLigada } from "./zerar.js";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
@@ -163,6 +164,15 @@ export async function prepararSePreciso() {
 
   const quantas = db.prepare("SELECT COUNT(*) AS n FROM propostas").get().n;
   if (quantas > 0) return true;
+
+  // Banco vazio nem sempre é primeira execução: pode ter sido zerado de
+  // propósito (npm run zerar). Nesse caso reimportar as planilhas desfaria
+  // exatamente o que a pessoa acabou de pedir.
+  if (!importacaoAutomaticaLigada(db)) {
+    log("\n  Sistema em branco, por opção — a importação automática está desligada.");
+    log("  Para religar:  npm run zerar -- --religar-importacao\n");
+    return false;
+  }
 
   log("\n  Primeira execução — preparando o sistema.");
 

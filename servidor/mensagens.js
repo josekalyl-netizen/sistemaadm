@@ -88,6 +88,91 @@ export const MENSAGENS = {
   ],
 };
 
+
+/**
+ * As mesmas mensagens, em versão e-mail: uma para cada variação do WhatsApp,
+ * na mesma ordem — quem escolhe é a ADM, na hora de mandar.
+ *
+ * A diferença é de registro, não de conteúdo: e-mail tem assunto, tratamento
+ * formal, sem emoji, e fecha com a assinatura da equipe. É o texto que o
+ * corretor pode encaminhar para a operadora ou anexar num processo.
+ */
+const ASSINATURA = "Atenciosamente,\nEquipe Administrativa — Grupo W3G";
+
+const corpo = (texto) => `${texto}\n\n${ASSINATURA}`;
+
+export const EMAILS = {
+  nova: {
+    assunto: "Proposta emitida — {empresa} ({operadora})",
+    textos: [
+      corpo("Prezado(a) {corretor},\n\nInformamos que a proposta do contrato {empresa}, junto à operadora {operadora}, foi emitida com sucesso.\n\nA partir de agora, o acompanhamento do processo passa a ser feito por nossa equipe, que manterá você informado sobre cada etapa até a conclusão.\n\nPermanecemos à disposição para quaisquer esclarecimentos."),
+    ],
+  },
+
+  em_analise: {
+    assunto: "Proposta em análise — {empresa} ({operadora})",
+    textos: [
+      corpo("Prezado(a) {corretor},\n\nInformamos que a proposta do contrato {empresa} encontra-se em análise pela operadora {operadora}.\n\nSeguiremos acompanhando o processo e comunicaremos assim que houver posição da operadora.\n\nPermanecemos à disposição."),
+      corpo("Prezado(a) {corretor},\n\nEncaminhamos atualização referente ao contrato {empresa}, da operadora {operadora}: a proposta segue em análise.\n\nNossa equipe acompanha o andamento e informará qualquer novidade tão logo ela ocorra.\n\nColocamo-nos à disposição para o que for necessário."),
+      corpo("Prezado(a) {corretor},\n\nA proposta do contrato {empresa}, protocolada junto à {operadora}, permanece em fase de análise.\n\nEstamos acompanhando de perto para assegurar que o processo avance dentro do previsto.\n\nPermanecemos à disposição para quaisquer esclarecimentos."),
+      corpo("Prezado(a) {corretor},\n\nTemos uma atualização sobre o contrato {empresa}: a proposta está em análise na operadora {operadora}.\n\nManteremos o acompanhamento e informaremos os próximos passos assim que definidos.\n\nPermanecemos à disposição."),
+      corpo("Prezado(a) {corretor},\n\nInformamos que a proposta do contrato {empresa}, junto à {operadora}, encontra-se na etapa de análise.\n\nNo momento aguardamos o retorno da operadora, e todo o processo segue sob acompanhamento de nossa equipe.\n\nFicamos à disposição para qualquer suporte."),
+      corpo("Prezado(a) {corretor},\n\nO contrato {empresa}, da operadora {operadora}, encontra-se atualmente em análise.\n\nSeguiremos monitorando o processo e retornaremos assim que houver posição.\n\nPermanecemos à disposição."),
+      corpo("Prezado(a) {corretor},\n\nInformamos que a proposta do contrato {empresa} está em análise pela operadora {operadora}.\n\nO andamento segue sob nosso acompanhamento e qualquer novidade será prontamente comunicada.\n\nColocamo-nos à disposição."),
+      corpo("Prezado(a) {corretor},\n\nA proposta do contrato {empresa}, junto à {operadora}, permanece em análise neste momento.\n\nEstamos acompanhando o processo e aguardando a evolução por parte da operadora.\n\nPermanecemos à disposição para qualquer suporte."),
+      corpo("Prezado(a) {corretor},\n\nComunicamos que o contrato {empresa}, da operadora {operadora}, está em análise.\n\nSeguiremos acompanhando e informaremos assim que houver qualquer movimentação no processo.\n\nFicamos à disposição."),
+      corpo("Prezado(a) {corretor},\n\nInformamos que a proposta do contrato {empresa}, junto à operadora {operadora}, encontra-se em análise.\n\nA partir de agora acompanhamos a evolução do processo e retornaremos com uma nova posição tão logo ela exista.\n\nPermanecemos à disposição para o que for necessário."),
+    ],
+  },
+
+  cotacao: {
+    assunto: "Cotação em andamento — {empresa} ({operadora})",
+    textos: [
+      corpo("Prezado(a) {corretor},\n\nInformamos que a cotação do contrato {empresa}, junto à operadora {operadora}, encontra-se em andamento.\n\nAssim que tivermos os valores e condições, encaminharemos a você para prosseguimento.\n\nPermanecemos à disposição para qualquer suporte nesta etapa."),
+    ],
+  },
+
+  enviada: {
+    assunto: "Proposta enviada à operadora — {empresa} ({operadora})",
+    textos: [
+      corpo("Prezado(a) {corretor},\n\nInformamos que a proposta do contrato {empresa} foi enviada à operadora {operadora} com sucesso.\n\nAguardamos o retorno e manteremos você informado sobre os próximos passos do processo.\n\nPermanecemos à disposição para quaisquer esclarecimentos."),
+    ],
+  },
+
+  pendente: {
+    assunto: "Pendência na proposta — {empresa} ({operadora})",
+    textos: [
+      corpo("Prezado(a) {corretor},\n\nInformamos que a proposta do contrato {empresa}, junto à operadora {operadora}, retornou com pendência.\n\nPendência apontada: {pendencia}\n\nSolicitamos a regularização para que o processo possa seguir seu curso normal. Nossa equipe acompanhará o ajuste até a conclusão.\n\nPermanecemos à disposição para qualquer suporte."),
+      corpo("Prezado(a) {corretor},\n\nRecebemos retorno da operadora {operadora} referente ao contrato {empresa}, e é necessário sanar uma pendência antes de dar continuidade ao processo.\n\nPendência apontada: {pendencia}\n\nAssim que o ajuste for encaminhado, retomaremos o andamento junto à operadora.\n\nFicamos à disposição para esclarecer o que for preciso."),
+      corpo("Prezado(a) {corretor},\n\nInformamos que a proposta do contrato {empresa}, junto à {operadora}, retornou para regularização.\n\nPendência apontada: {pendencia}\n\nApós a resolução, daremos sequência imediata ao processo.\n\nPermanecemos à disposição para auxiliá-lo no que for necessário."),
+    ],
+  },
+
+  em_implantacao: {
+    assunto: "Proposta aceita — implantação em andamento — {empresa} ({operadora})",
+    textos: [
+      corpo("Prezado(a) {corretor},\n\nTemos a satisfação de informar que a proposta do contrato {empresa} foi aceita pela operadora {operadora} e encontra-se em processo de implantação.\n\nSeguiremos acompanhando esta etapa até a conclusão e comunicaremos o encerramento.\n\nPermanecemos à disposição."),
+      corpo("Prezado(a) {corretor},\n\nInformamos que a operadora {operadora} aceitou a proposta do contrato {empresa}, que já se encontra em processo de implantação.\n\nNossa equipe acompanha o processo até a finalização e o manterá informado.\n\nFicamos à disposição para quaisquer esclarecimentos."),
+    ],
+  },
+
+  implantada: {
+    assunto: "Contrato implantado — {empresa} ({operadora})",
+    textos: [
+      corpo("Prezado(a) {corretor},\n\nInformamos que o contrato {empresa}, junto à operadora {operadora}, foi implantado com sucesso.\n\nAguardamos agora a disponibilização do boleto pela operadora e, assim que emitido, será encaminhado a você.\n\nPermanecemos à disposição para qualquer suporte."),
+    ],
+  },
+
+  cancelada: {
+    assunto: "Cancelamento da proposta — {empresa} ({operadora})",
+    textos: [
+      corpo("Prezado(a) {corretor},\n\nInformamos que recebemos retorno da operadora {operadora} referente ao contrato {empresa}, e a proposta foi cancelada.\n\nSabemos que não é o desfecho esperado. Colocamo-nos à disposição para avaliar o caso e apresentar uma alternativa ao cliente.\n\nPermanecemos à disposição."),
+      corpo("Prezado(a) {corretor},\n\nComunicamos que a proposta do contrato {empresa}, da operadora {operadora}, foi cancelada.\n\nPodemos analisar o motivo do cancelamento e verificar alternativas de operadora ou produto que permitam dar continuidade ao atendimento do cliente.\n\nFicamos à disposição para conduzir essa análise em conjunto."),
+      corpo("Prezado(a) {corretor},\n\nInformamos o cancelamento da proposta referente ao contrato {empresa}, junto à operadora {operadora}.\n\nEntendemos que este não era o resultado esperado. Estamos à disposição para avaliar o caso e buscar uma segunda opção, aproveitando o que já foi construído no processo.\n\nPermanecemos à disposição."),
+    ],
+  },
+};
+
 /** Preenche os marcadores da mensagem com os dados da proposta. */
 export function preencher(modelo, proposta, pendencia = "") {
   const dados = {
@@ -106,12 +191,16 @@ export function preencher(modelo, proposta, pendencia = "") {
 
 /**
  * Escolhe uma mensagem para a proposta, evitando as que esse corretor já
- * recebeu nessa etapa. Quando todas as 15 já rodaram, recomeça — mas nunca
- * repete a última usada em seguida.
+ * recebeu nessa etapa POR ESSE CANAL — o rodízio do WhatsApp e o do e-mail são
+ * independentes, senão mandar um e-mail queimaria a variação do WhatsApp.
+ * Quando todas já rodaram, recomeça, sem repetir a última em seguida.
  */
-export function escolherMensagem(db, proposta, { pendencia = "", indice = null } = {}) {
+export function escolherMensagem(db, proposta, { pendencia = "", indice = null, canal = "whatsapp" } = {}) {
   const etapaCodigo = proposta.status_atual;
-  const modelos = MENSAGENS[etapaCodigo] || [];
+  const porEmail = canal === "email";
+  const modelos = porEmail
+    ? (EMAILS[etapaCodigo]?.textos || [])
+    : (MENSAGENS[etapaCodigo] || []);
   if (!modelos.length) return null;
 
   const corretor = texto(proposta.corretor).toUpperCase() || "(sem corretor)";
@@ -121,8 +210,8 @@ export function escolherMensagem(db, proposta, { pendencia = "", indice = null }
     escolhido = indice;                       // a ADM pediu outra mensagem
   } else {
     const usados = db.prepare(
-      "SELECT indice FROM mensagens_uso WHERE corretor = ? AND etapa = ? ORDER BY id DESC",
-    ).all(corretor, etapaCodigo).map((r) => r.indice);
+      "SELECT indice FROM mensagens_uso WHERE corretor = ? AND etapa = ? AND canal = ? ORDER BY id DESC",
+    ).all(corretor, etapaCodigo, canal).map((r) => r.indice);
 
     const todos = modelos.map((_, i) => i);
     let candidatos = todos.filter((i) => !usados.includes(i));
@@ -141,21 +230,24 @@ export function escolherMensagem(db, proposta, { pendencia = "", indice = null }
 
   return {
     etapa: etapaCodigo,
+    canal,
     indice: escolhido,
     total: modelos.length,
     corretor_nome: primeiroNome(proposta.corretor),
     pede_pendencia: etapaCodigo === "pendente",
+    assunto: porEmail ? preencher(EMAILS[etapaCodigo].assunto, proposta, pendencia) : "",
     texto: preencher(modelos[escolhido], proposta, pendencia),
   };
 }
 
 /** Registra que a mensagem foi usada — é o que impede a repetição. */
-export function registrarUso(db, proposta, indice) {
+export function registrarUso(db, proposta, indice, canal = "whatsapp") {
   db.prepare(
-    "INSERT INTO mensagens_uso (corretor, etapa, indice, proposta_id) VALUES (?, ?, ?, ?)",
+    "INSERT INTO mensagens_uso (corretor, etapa, canal, indice, proposta_id) VALUES (?, ?, ?, ?, ?)",
   ).run(
     texto(proposta.corretor).toUpperCase() || "(sem corretor)",
     proposta.status_atual,
+    canal === "email" ? "email" : "whatsapp",
     Number(indice),
     proposta.id,
   );

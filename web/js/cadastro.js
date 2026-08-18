@@ -105,6 +105,14 @@ function formulario() {
         </div>
       </div>
 
+      <label class="marcador" for="c-emitida">
+        <input type="checkbox" id="c-emitida">
+        <span>
+          <b>Emitida pelo corretor</b>
+          <span class="dica">Fica marcado na proposta para sempre — não dá para desfazer depois.</span>
+        </span>
+      </label>
+
       <div id="c-pendencia" class="oculto" style="margin-top:20px">
         <label class="rotulo" for="c-pend-detalhe">Pendência</label>
         <input id="c-pend-detalhe" class="campo" placeholder="descreva a pendência">
@@ -194,6 +202,7 @@ function corpoFormulario() {
     cadastrado: $("#c-cadastrado").value,
     observacoes: $("#c-obs").value,
     pendencia_detalhe: $("#c-pend-detalhe")?.value || "",
+    emitida_pelo_corretor: $("#c-emitida").checked,
   };
 }
 

@@ -1,40 +1,70 @@
 /* ============================================================
    Sistema Administrativo Inteligente — Grupo W3G
-   Base visual minimalista: papel off-white, tinta quase preta,
-   fios de cabelo no lugar de bordas, nenhuma sombra. A única cor
-   da tela é a da etapa da proposta.
+
+   Identidade visual do grupo: fundo cinza-claro, conteúdo em
+   cartões brancos de canto arredondado, azul institucional nos
+   títulos e nas ações, tipografia Plus Jakarta Sans.
+
+   A cor da etapa da proposta continua sendo informação, não
+   enfeite: aparece no ponto, no fio da linha e no tingimento.
    ============================================================ */
 
 :root {
   /* — claro (padrão) — */
-  --papel: 250 250 248;      /* fundo */
+  --papel: 239 239 239;      /* #efefef  fundo da página */
   --superficie: 255 255 255; /* cartões */
-  --tinta: 20 22 26;         /* texto */
-  --tinta2: 82 86 94;        /* texto secundário */
-  --apagado: 138 138 133;    /* rótulos, metadados */
-  --fio: 228 227 222;        /* linha divisória */
-  --fio2: 240 239 235;       /* linha ainda mais leve */
-  --realce: 20 22 26;        /* ação principal (preto tinta) */
-  --alerta: 168 60 50;
+  --superficie2: 249 249 249;/* #f9f9f9  rodapés e blocos internos */
+  --tinta: 76 83 89;         /* #4c5359  texto */
+  --tinta2: 120 120 120;     /* #787878  texto secundário */
+  --apagado: 158 158 158;    /* #9e9e9e  rótulos, metadados */
+  --fio: 229 231 235;        /* #e5e7eb  bordas */
+  --fio2: 243 244 246;       /* #f3f4f6  divisórias internas */
 
-  --raio: 2px;
+  /* azuis institucionais */
+  --azul: 26 63 125;         /* #1a3f7d  títulos */
+  --azul-escuro: 2 56 89;    /* #023859 */
+  --azul-icone: 29 92 185;   /* #1d5cb9  destaques e links */
+  --realce: 21 49 97;        /* #153161  botão principal */
+
+  /* estados */
+  --alerta: 196 50 74;       /* #c4324a */
+  --sucesso: 66 173 44;      /* #42ad2c */
+  --atencao: 240 177 43;     /* #f0b12b */
+
+  --raio: 12px;              /* campos e botões grandes */
+  --raio-botao: 10px;
+  --raio-cartao: 16px;
+  --sombra: 0 1px 2px 0 rgb(0 0 0 / .05);
+  --sombra-alta: 0 4px 10px rgb(0 0 0 / .08);
+
   --tinta-etapa: .10;        /* tingimento do card por etapa */
   --tinta-etapa-forte: .18;
 }
 
 :root[data-tema="escuro"] {
-  --papel: 14 15 17;
-  --superficie: 22 24 27;
-  --tinta: 242 241 237;
-  --tinta2: 178 180 184;
-  --apagado: 126 128 132;
-  --fio: 42 45 50;
-  --fio2: 32 34 38;
-  --realce: 242 241 237;
-  --alerta: 214 106 96;
+  --papel: 15 20 28;
+  --superficie: 22 29 40;
+  --superficie2: 28 36 48;
+  --tinta: 226 232 240;
+  --tinta2: 176 186 200;
+  --apagado: 132 143 160;
+  --fio: 44 56 74;
+  --fio2: 33 43 58;
 
-  --tinta-etapa: .14;
-  --tinta-etapa-forte: .24;
+  --azul: 147 190 240;
+  --azul-escuro: 120 170 225;
+  --azul-icone: 120 175 245;
+  --realce: 29 92 185;
+
+  --alerta: 233 116 138;
+  --sucesso: 116 205 96;
+  --atencao: 240 194 96;
+
+  --sombra: 0 1px 2px 0 rgb(0 0 0 / .35);
+  --sombra-alta: 0 4px 12px rgb(0 0 0 / .45);
+
+  --tinta-etapa: .16;
+  --tinta-etapa-forte: .28;
 }
 
 * { box-sizing: border-box; }
@@ -44,70 +74,60 @@ body {
   margin: 0;
   background: rgb(var(--papel));
   color: rgb(var(--tinta));
-  font-family: Inter, -apple-system, "Segoe UI", system-ui, sans-serif;
-  font-size: 13.5px;
+  font-family: "Plus Jakarta Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  font-feature-settings: "cv05", "ss01";
 }
 
 /* ------------------------------------------------------------ tipografia */
 
-/* Serifa só para os títulos e os números grandes — é o único gesto
-   editorial da interface; o resto é sans, discreto. */
-.serifa {
-  font-family: "Instrument Serif", Georgia, "Times New Roman", serif;
-  font-weight: 400;
-  letter-spacing: -0.01em;
-}
-
-h1, h2, h3 { margin: 0; font-weight: 500; }
+h1, h2, h3 { margin: 0; font-weight: 800; color: rgb(var(--azul)); }
 
 .titulo {
-  font-family: "Instrument Serif", Georgia, serif;
   font-size: 26px;
-  font-weight: 400;
-  letter-spacing: -0.015em;
-  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: rgb(var(--azul));
 }
 .titulo-menor {
-  font-family: "Instrument Serif", Georgia, serif;
-  font-size: 19px;
-  font-weight: 400;
+  font-size: 18px;
+  font-weight: 800;
+  color: rgb(var(--azul));
 }
 
-/* Micro-rótulo: caixa alta, tracking largo. Marca as seções sem peso. */
+/* Micro-rótulo do formulário: peso, não caixa alta. */
 .rotulo {
   display: block;
-  font-size: 9.5px;
-  text-transform: uppercase;
-  letter-spacing: .16em;
-  color: rgb(var(--apagado));
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--tinta));
   margin-bottom: 6px;
 }
 
+/* Chamada de seção ("kicker"): caixa alta curta, azul, acima do conteúdo. */
 .secao {
-  font-size: 9.5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
   text-transform: uppercase;
-  letter-spacing: .18em;
-  color: rgb(var(--apagado));
-  font-weight: 500;
-  padding-bottom: 9px;
+  color: rgb(var(--azul-icone));
+  padding-bottom: 10px;
   margin-bottom: 16px;
   border-bottom: 1px solid rgb(var(--fio));
 }
 
 .numero {
-  font-family: "Instrument Serif", Georgia, serif;
-  font-size: 34px;
-  line-height: 1;
-  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.15;
+  font-weight: 800;
+  color: rgb(var(--tinta));
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
 
-.mono { font-variant-numeric: tabular-nums; }
+.mono { font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
 .apagado { color: rgb(var(--apagado)); }
 .tinta2 { color: rgb(var(--tinta2)); }
 .oculto { display: none !important; }
@@ -116,25 +136,55 @@ h1, h2, h3 { margin: 0; font-weight: 500; }
 .bloco {
   background: rgb(var(--superficie));
   border: 1px solid rgb(var(--fio));
-  border-radius: var(--raio);
+  border-radius: var(--raio-cartao);
+  box-shadow: var(--sombra);
 }
 
 /* ---------------------------------------------------------------- etiquetas */
 .etiqueta {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 10.5px;
-  letter-spacing: .04em;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
   color: rgb(var(--tinta2));
   white-space: nowrap;
 }
 /* o ponto colorido é o que identifica a etapa — dispensa fundo colorido */
 .ponto {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: rgb(var(--cor, 154 167 188));
+  flex-shrink: 0;
+}
+
+/* Pílula de status, no padrão do grupo: fundo suave, borda da mesma família. */
+.selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+/* Marca permanente de origem: a proposta foi emitida pelo próprio corretor. */
+.selo-corretor {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  background: rgb(var(--azul-icone) / .1);
+  color: rgb(var(--azul-icone));
+  border: 1px solid rgb(var(--azul-icone) / .25);
+  white-space: nowrap;
   flex-shrink: 0;
 }
 
@@ -144,87 +194,106 @@ h1, h2, h3 { margin: 0; font-weight: 500; }
 :root { color-scheme: light; }
 :root[data-tema="escuro"] { color-scheme: dark; }
 
-input, select, textarea, button { font-family: inherit; font-size: 13px; color: inherit; }
+input, select, textarea, button { font-family: inherit; font-size: 14px; color: inherit; }
 
 .campo {
   width: 100%;
-  padding: 7px 0;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid rgb(var(--fio));
-  border-radius: 0;
+  padding: 10px 14px;
+  background: rgb(var(--superficie));
+  border: 1px solid rgb(var(--fio));
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
   color: rgb(var(--tinta));
   outline: none;
-  transition: border-color .15s;
+  transition: border-color .15s, background-color .15s;
 }
+.campo:hover { background: rgb(var(--superficie2)); }
+.campo:focus { border-color: rgb(var(--azul-icone)); background: rgb(var(--superficie)); }
+.campo::placeholder { color: rgb(var(--apagado)); }
 select.campo, select {
-  background-color: rgb(var(--papel));
+  background-color: rgb(var(--superficie));
   color: rgb(var(--tinta));
 }
 select.campo option, select option {
-  background-color: rgb(var(--papel));
+  background-color: rgb(var(--superficie));
   color: rgb(var(--tinta));
 }
-.campo:focus { border-bottom-color: rgb(var(--tinta)); }
-.campo::placeholder { color: rgb(var(--apagado)); }
-select.campo { cursor: pointer; padding-right: 14px; }
-textarea.campo { resize: vertical; min-height: 56px; border: 1px solid rgb(var(--fio)); padding: 8px 10px; }
+select.campo { cursor: pointer; }
+textarea.campo { resize: vertical; min-height: 76px; }
+
+/* Caixa de seleção com explicação ao lado — usada no cadastro. */
+.marcador {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 20px;
+  padding: 12px 14px;
+  border: 1px solid rgb(var(--fio));
+  border-radius: var(--raio);
+  background: rgb(var(--superficie2));
+  cursor: pointer;
+}
+.marcador:hover { border-color: rgb(var(--azul-icone)); }
+.marcador input { margin-top: 2px; width: 16px; height: 16px; accent-color: rgb(var(--azul-icone)); cursor: pointer; }
+.marcador b { display: block; font-size: 13.5px; font-weight: 700; color: rgb(var(--tinta)); }
+.marcador .dica { margin-top: 2px; }
 
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 7px 14px;
+  gap: 8px;
+  padding: 9px 18px;
   border: 1px solid rgb(var(--fio));
-  border-radius: var(--raio);
-  background: transparent;
+  border-radius: var(--raio-botao);
+  background: rgb(var(--superficie));
   color: rgb(var(--tinta));
   cursor: pointer;
-  font-size: 12px;
-  letter-spacing: .02em;
-  transition: border-color .15s, background .15s, opacity .15s;
+  font-size: 13.5px;
+  font-weight: 600;
+  transition: background .15s, border-color .15s, opacity .15s, transform .1s;
 }
-.btn:hover { border-color: rgb(var(--tinta2)); }
-.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn:hover { background: rgb(var(--superficie2)); border-color: rgb(var(--apagado)); }
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
 
 .btn-cheio {
   background: rgb(var(--realce));
   border-color: rgb(var(--realce));
-  color: rgb(var(--papel));
+  color: #fff;
 }
-.btn-cheio:hover { opacity: .85; border-color: rgb(var(--realce)); }
+.btn-cheio:hover { background: rgb(var(--azul)); border-color: rgb(var(--azul)); color: #fff; }
 
-.btn-limpo { border-color: transparent; color: rgb(var(--tinta2)); padding: 6px 8px; }
-.btn-limpo:hover { color: rgb(var(--tinta)); border-color: transparent; text-decoration: underline; }
+.btn-limpo { border-color: transparent; background: transparent; color: rgb(var(--azul-icone)); }
+.btn-limpo:hover { background: rgb(var(--azul-icone) / .08); border-color: transparent; }
 
-.btn-mini { padding: 4px 9px; font-size: 11px; }
+.btn-mini { padding: 6px 12px; font-size: 12.5px; }
 
 /* ------------------------------------------------------------------ tabela */
 table { width: 100%; border-collapse: collapse; }
 th {
   text-align: left;
-  font-size: 9.5px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: .14em;
+  letter-spacing: .06em;
   color: rgb(var(--apagado));
-  font-weight: 500;
-  padding: 0 12px 9px 0;
+  font-weight: 700;
+  padding: 0 14px 10px 0;
   border-bottom: 1px solid rgb(var(--fio));
   white-space: nowrap;
 }
 td {
-  padding: 11px 12px 11px 0;
+  padding: 12px 14px 12px 0;
   border-bottom: 1px solid rgb(var(--fio2));
   vertical-align: middle;
 }
 th.num, td.num { text-align: right; padding-right: 0; font-variant-numeric: tabular-nums; }
-tbody tr:hover td { background: rgb(var(--fio2) / .5); }
+tbody tr:hover td { background: rgb(var(--fio2) / .6); }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgb(var(--apagado) / .3);
+  background: rgb(var(--apagado) / .35);
   border: 3px solid transparent;
   border-radius: 8px;
   background-clip: content-box;

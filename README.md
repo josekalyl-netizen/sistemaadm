@@ -30,7 +30,19 @@ de **Python 3** (só para ler os `.xlsx`). Nenhuma dependência de Node.
 PLANILHAS=/caminho/da/pasta npm start   # planilhas em outro lugar
 npm run importar:simular                # relatório de validação, sem gravar
 npm run importar:recomecar              # apaga tudo e importa do zero
+npm run zerar                           # mostra o que existe, sem apagar
+npm run zerar -- --agora                # deixa o sistema em branco
 ```
+
+### Deixar o sistema em branco
+
+`npm run zerar -- --agora` apaga **todos** os registros — propostas, histórico,
+verificações, corretores e usuários — e mantém a estrutura intacta. Não tem como
+desfazer: para guardar o que existe, copie `dados/sistema.db` antes.
+
+Depois de zerar, a importação automática das planilhas fica desligada, senão a
+próxima subida confundiria o banco vazio com uma primeira execução e traria tudo
+de volta. Para religar: `npm run zerar -- --religar-importacao`.
 
 ---
 
@@ -52,6 +64,10 @@ Cadastro, busca, filtros e etapas. Os campos são os da planilha:
 **Corretor e Responsável ADM são coisas diferentes** e vivem em campos
 separados. Empresa, CNPJ/CPF, corretor, operadora, responsável ADM, valor e
 emissão são obrigatórios — sem eles o cadastro não é liberado.
+
+No cadastro existe a marca **Emitida pelo corretor**. É origem, não etapa: fica
+na proposta para sempre, aparece como selo na lista e na ficha, e não está entre
+os campos editáveis — deixá-la editável transformaria um fato em opinião.
 
 O supervisor de cada corretor é cadastrado só pelo Master, por um CSV
 `corretor,supervisor` (tela Master → Corretores). Ao escolher o corretor no
@@ -83,8 +99,14 @@ Etapas encerradas (Implantada, Cancelada) saem da fila — não têm prazo.
 
 ### 4 · Comunicação
 
-Mensagens prontas para a ADM copiar e mandar para o corretor. O número de
-variações muda por etapa — Em análise tem 10; Pendente e Cancelada, 3; Em
+Mensagens prontas para a ADM copiar e mandar para o corretor, em **dois canais**:
+**WhatsApp** (o texto do dia a dia, direto, com emoji) e **E-mail** (a mesma
+mensagem em registro formal, com assunto e assinatura da equipe — o texto que o
+corretor pode encaminhar para a operadora). A ADM escolhe na hora de mandar; no
+e-mail, o assunto é copiado junto com o corpo.
+
+Cada canal tem o próprio rodízio: mandar um e-mail não gasta a variação do
+WhatsApp. O número de variações muda por etapa — Em análise tem 10; Pendente e Cancelada, 3; Em
 implantação, 2; as demais têm a mensagem-padrão da etapa. O sistema escolhe uma
 sozinho e **não repete a mesma para o mesmo corretor** enquanto houver outra
 disponível.
@@ -234,7 +256,8 @@ servidor/dominio.js             etapas, níveis, mapeamento, validações
 servidor/banco.js               esquema SQLite
 servidor/importar.js            importação com validação e deduplicação
 servidor/acompanhamento.js      verificações, níveis, fechamento e relatórios
-servidor/mensagens.js           as mensagens prontas de cada etapa
+servidor/mensagens.js           as mensagens de cada etapa (WhatsApp e e-mail)
+servidor/zerar.js               deixa o sistema em branco, mantendo a estrutura
 servidor/autenticacao.js        senha e sessão da Área Master
 servidor/api.js                 consultas e regras de escrita
 servidor/servidor.js            HTTP: serve a interface e a API

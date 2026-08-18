@@ -7,7 +7,7 @@
  */
 
 import { $, $$, api, avisar, corRGB, dataCurta, esc, moeda, numero } from "./util.js";
-import { estado, etapaDe, nivelDe } from "./estado.js";
+import { estado, etapaDe } from "./estado.js";
 import { abrirFicha } from "./ficha.js";
 
 /** Texto curto do nível: "há 3 dias", "hoje". */
@@ -29,7 +29,6 @@ export function textoNivel(p) {
  */
 export function linhaProposta(p, { comVerificar = true, modo = "completo" } = {}) {
   const et = etapaDe(p.status_atual);
-  const niv = nivelDe(p.nivel);
   const precisa = p.nivel !== "encerrada";
   const jaHoje = p.nivel === "acompanhando";
 
@@ -37,7 +36,10 @@ export function linhaProposta(p, { comVerificar = true, modo = "completo" } = {}
   <div class="linha" data-id="${p.id}" style="--cor:${corRGB(et.cor)}">
     <div class="linha-cor"></div>
     <div class="linha-corpo">
-      <div class="linha-nome">${esc(p.razao_social)}</div>
+      <div class="linha-nome">
+        ${esc(p.razao_social)}
+        ${p.emitida_pelo_corretor ? `<span class="selo-corretor" title="Emitida pelo corretor">corretor</span>` : ""}
+      </div>
       <div class="linha-meta">
         <span class="etiqueta"><i class="ponto" style="--cor:${corRGB(et.cor)}"></i>${esc(et.nome)}</span>
         <span class="mono">${esc(p.documento_exibido || "—")}</span>
@@ -49,7 +51,7 @@ export function linhaProposta(p, { comVerificar = true, modo = "completo" } = {}
     </div>
     <div class="linha-fim">
       ${modo === "so-valor" ? "" : (precisa
-        ? `<span class="nivel nivel-${p.nivel}">${niv.sinal} ${esc(textoNivel(p))}</span>`
+        ? `<span class="nivel nivel-${p.nivel}">${esc(textoNivel(p))}</span>`
         : "<span></span>")}
       <span class="linha-valor">${moeda(p.valor)}</span>
       ${modo !== "completo" ? "" : (comVerificar && precisa

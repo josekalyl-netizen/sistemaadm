@@ -62,7 +62,8 @@ function desenhar() {
     <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:12px">
       <span class="etiqueta"><i class="ponto" style="--cor:${corRGB(et.cor)}"></i>${esc(et.nome)}</span>
       <span class="etiqueta">${esc(p.nome_adm || "sem responsável")}</span>
-      ${precisa ? `<span class="nivel nivel-${p.nivel}">${niv.sinal} ${esc(niv.nome)}</span>` : ""}
+      ${precisa ? `<span class="nivel nivel-${p.nivel}">${esc(niv.nome)}</span>` : ""}
+      ${p.emitida_pelo_corretor ? `<span class="selo-corretor">Emitida pelo corretor</span>` : ""}
     </div>`;
   $("#fechar-ficha").addEventListener("click", fecharFicha);
 
@@ -137,11 +138,22 @@ function blocoMensagem(p) {
   return `
     <section class="ficha-secao">
       <div class="secao">Mensagem para ${esc(p.corretor || "o corretor")}</div>
+
+      <div class="canais" id="msg-canais" role="group" aria-label="Canal da mensagem">
+        <button class="canal ativo" data-canal="whatsapp">WhatsApp</button>
+        <button class="canal" data-canal="email">E-mail</button>
+      </div>
+
       ${p.status_atual === "pendente" ? `
         <label class="rotulo" for="msg-pendencia">Pendência (entra na mensagem)</label>
         <input id="msg-pendencia" class="campo" style="margin-bottom:14px"
                value="${esc(p.pendencia_detalhe || p.pendencia_tipo)}"
                placeholder="ex.: cópia do contrato social assinado">` : ""}
+
+      <div class="mensagem-assunto oculto" id="msg-assunto-caixa">
+        <span class="rotulo">Assunto</span>
+        <div id="msg-assunto"></div>
+      </div>
       <div class="mensagem-caixa" id="msg-texto">carregando…</div>
       <div class="mensagem-acoes">
         <button class="btn btn-mini btn-cheio" id="msg-copiar">Copiar</button>
@@ -241,6 +253,8 @@ function ligarEventos() {
   });
 
   carregarMensagem();
+  $$("#msg-canais .canal").forEach((b) =>
+    b.addEventListener("click", () => trocarCanal(b.dataset.canal)));
   $("#msg-outra").addEventListener("click", () => carregarMensagem(true));
   $("#msg-copiar").addEventListener("click", copiarMensagem);
   const pendMsg = $("#msg-pendencia");
@@ -296,6 +310,8 @@ async function salvarCampos() {
 // ---------------------------------------------------------- mensagens
 
 let mensagemAtual = null;
+/** WhatsApp é o padrão do dia a dia; o e-mail é a versão formal da mesma etapa. */
+let canalAtual = "whatsapp";
 
 async function carregarMensagem(outra = false, apenasPendencia = false) {
   const caixa = $("#msg-texto");
@@ -305,20 +321,43 @@ async function carregarMensagem(outra = false, apenasPendencia = false) {
   try {
     // "Outra mensagem" pede a próxima; digitar a pendência só re-preenche a mesma
     const indice = apenasPendencia && mensagemAtual ? mensagemAtual.indice : undefined;
-    const m = await api.mensagem(atual.id, { pendencia, indice });
+    const m = await api.mensagem(atual.id, { pendencia, indice, canal: canalAtual });
     mensagemAtual = m;
     caixa.textContent = m.texto;
     $("#msg-conta").textContent = `${m.indice + 1} de ${m.total}`;
+
+    const caixaAssunto = $("#msg-assunto-caixa");
+    caixaAssunto.classList.toggle("oculto", !m.assunto);
+    $("#msg-assunto").textContent = m.assunto || "";
   } catch (erro) {
     caixa.textContent = "Não há mensagem pronta para esta etapa.";
     $("#msg-conta").textContent = "";
+    $("#msg-assunto-caixa")?.classList.add("oculto");
   }
+}
+
+/** Troca de canal recomeça a escolha: cada canal tem o rodízio dele. */
+function trocarCanal(canal) {
+  if (canal === canalAtual) return;
+  canalAtual = canal;
+  mensagemAtual = null;
+  $$("#msg-canais .canal").forEach((b) =>
+    b.classList.toggle("ativo", b.dataset.canal === canal));
+  carregarMensagem();
+}
+
+function textoParaCopiar() {
+  // No e-mail o assunto vai junto: copiar só o corpo obrigaria a ADM a voltar
+  // aqui para pegar o título.
+  return mensagemAtual.assunto
+    ? `Assunto: ${mensagemAtual.assunto}\n\n${mensagemAtual.texto}`
+    : mensagemAtual.texto;
 }
 
 async function copiarMensagem() {
   if (!mensagemAtual) return;
   try {
-    await navigator.clipboard.writeText(mensagemAtual.texto);
+    await navigator.clipboard.writeText(textoParaCopiar());
     avisar("Mensagem copiada.");
   } catch {
     // navegador sem permissão de área de transferência: seleciona o texto
@@ -329,7 +368,7 @@ async function copiarMensagem() {
     avisar("Selecionei a mensagem — use Ctrl+C.");
   }
   // registra o uso para não repetir a mesma com esse corretor
-  api.usouMensagem(atual.id, mensagemAtual.indice).catch(() => {});
+  api.usouMensagem(atual.id, mensagemAtual.indice, mensagemAtual.canal).catch(() => {});
 }
 
 function nomeDoAutor() {

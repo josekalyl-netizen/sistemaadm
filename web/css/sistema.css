@@ -9,9 +9,9 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgb(var(--papel) / .93);
-  backdrop-filter: blur(10px);
+  background: rgb(var(--superficie));
   border-bottom: 1px solid rgb(var(--fio));
+  box-shadow: var(--sombra);
   margin: 0 -32px;
   padding: 0 32px;
 }
@@ -20,7 +20,7 @@
   display: flex;
   align-items: center;
   gap: 24px;
-  height: 58px;
+  height: 68px;
   flex-wrap: nowrap;
 }
 
@@ -30,10 +30,11 @@
 /* a logo é tinta azul-marinho — no tema escuro vira silhueta clara, senão some no fundo quase preto */
 :root[data-tema="escuro"] .marca-logo { filter: brightness(0) invert(1) opacity(.92); }
 .marca-nome {
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .18em;
-  color: rgb(var(--apagado));
+  letter-spacing: .12em;
+  color: rgb(var(--azul));
   white-space: nowrap;
 }
 
@@ -48,14 +49,15 @@
   border-left: 1px solid rgb(var(--fio));
 }
 .seletor-usuario select {
-  border: none;
-  border-bottom: 1px solid transparent;
-  padding: 3px 0;
-  font-size: 12.5px;
-  letter-spacing: .02em;
+  border: 1px solid rgb(var(--fio));
+  border-radius: var(--raio-botao);
+  background: rgb(var(--superficie));
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
 }
-.seletor-usuario select:hover { border-bottom-color: rgb(var(--fio)); }
+.seletor-usuario select:hover { background: rgb(var(--superficie2)); }
 
 /* busca */
 .busca { position: relative; flex: 1 1 260px; max-width: 380px; min-width: 160px; }
@@ -63,29 +65,31 @@
   position: absolute; left: 0; top: 50%; transform: translateY(-50%);
   color: rgb(var(--apagado)); pointer-events: none;
 }
-.busca input { padding-left: 22px; }
+.busca input { padding-left: 38px; }
+.busca svg { left: 14px; }
 
 /* navegação entre telas */
 .abas { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
 .abas::-webkit-scrollbar { display: none; }
 .aba {
   position: relative;
-  padding: 11px 14px;
-  font-size: 11.5px;
-  letter-spacing: .04em;
-  color: rgb(var(--apagado));
+  padding: 13px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: rgb(var(--tinta2));
   background: none;
   border: none;
-  border-bottom: 1px solid transparent;
+  border-bottom: 2px solid transparent;
   cursor: pointer;
   white-space: nowrap;
   transition: color .15s;
 }
-.aba:hover { color: rgb(var(--tinta)); }
-.aba.ativa { color: rgb(var(--tinta)); border-bottom-color: rgb(var(--tinta)); }
+.aba:hover { color: rgb(var(--azul)); }
+.aba.ativa { color: rgb(var(--azul)); border-bottom-color: rgb(var(--azul-icone)); }
 .aba .conta {
   margin-left: 6px;
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 700;
   color: rgb(var(--apagado));
   font-variant-numeric: tabular-nums;
 }
@@ -105,14 +109,14 @@
 /* ------------------------------------------------------------------ números */
 .numeros {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  border-top: 1px solid rgb(var(--fio));
-  border-left: 1px solid rgb(var(--fio));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
 }
 .numero-bloco {
-  padding: 18px 20px;
-  border-right: 1px solid rgb(var(--fio));
-  border-bottom: 1px solid rgb(var(--fio));
+  padding: 16px 18px;
+  border: 1px solid rgb(var(--fio));
+  border-radius: var(--raio-cartao);
+  box-shadow: var(--sombra);
   background: rgb(var(--superficie));
   /* Coluna com o rótulo em cima e o número embaixo: quando um rótulo quebra em
      duas linhas ("IMPLANTADO NO MÊS"), é o espaço do meio que estica — os
@@ -122,9 +126,14 @@
   min-width: 0;
 }
 .numero-bloco .rotulo { margin: 0 0 auto; padding-bottom: 10px; }
+.numero-bloco .rotulo {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgb(var(--apagado));
+}
 .numero-bloco.destaque .numero { color: rgb(var(--alerta)); }
-.numero-bloco.acionavel { cursor: pointer; transition: background .15s; }
-.numero-bloco.acionavel:hover { background: rgb(var(--fio2)); }
+.numero-bloco.acionavel { cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.numero-bloco.acionavel:hover { border-color: rgb(var(--azul-icone)); box-shadow: var(--sombra-alta); }
 
 /* Cartões de dinheiro: "R$ 2.288.804,06" é muito mais largo que "865", então a
    coluna é maior e o corpo do número é menor — senão o valor vaza por cima da
@@ -141,34 +150,29 @@
    anos viravam dois blocos de meia tela cada. Com `auto-fill` os cartões ficam
    do tamanho certo e a fileira não estica; a borda sai do container e vai para
    cada cartão, para não sobrar um fio atravessando o vazio. */
-.numeros.compacta {
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  border: none;
-}
-.numeros.compacta .numero-bloco {
-  border: 1px solid rgb(var(--fio));
-  margin: 0 -1px -1px 0;
-}
+.numeros.compacta { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
 
 /* O total em acompanhamento é a manchete do painel: uma faixa só dele, em vez
    de um cartão solto numa grade de quatro colunas. */
 .faixa-valor {
   display: flex;
   align-items: baseline;
-  gap: 14px;
+  gap: 16px;
   flex-wrap: wrap;
-  padding: 20px;
+  padding: 22px 24px;
   border: 1px solid rgb(var(--fio));
+  border-radius: var(--raio-cartao);
+  box-shadow: var(--sombra);
   background: rgb(var(--superficie));
 }
 .faixa-valor .numero {
   font-size: 32px;
   letter-spacing: -0.02em;
   white-space: nowrap;
-  color: rgb(var(--alerta));
+  color: rgb(var(--azul));
 }
 .faixa-valor .apoio { font-size: 12px; color: rgb(var(--apagado)); font-variant-numeric: tabular-nums; }
-.faixa-valor .rotulo { margin: 0; }
+.faixa-valor .rotulo { margin: 0; font-size: 12px; font-weight: 600; color: rgb(var(--apagado)); }
 .numero.dinheiro {
   font-size: 19px;
   letter-spacing: -0.01em;
@@ -182,28 +186,32 @@
 }
 
 /* ------------------------------------------------------------------ etapas */
-.etapas { display: flex; flex-wrap: wrap; gap: 0; border-top: 1px solid rgb(var(--fio)); }
+/* Grade, não flex: com `flex: 1 1` a última etapa da fileira esticava sozinha
+   pela largura toda quando sobrava só ela. */
+.etapas { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
 .etapa-item {
-  flex: 1 1 120px;
-  padding: 13px 14px;
-  border-bottom: 1px solid rgb(var(--fio));
-  border-right: 1px solid rgb(var(--fio));
-  background: none;
+  padding: 12px 14px;
+  border: 1px solid rgb(var(--fio));
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  background: rgb(var(--superficie));
   text-align: left;
   cursor: pointer;
-  transition: background .15s;
+  transition: background .15s, border-color .15s;
 }
-.etapa-item:first-child { border-left: 1px solid rgb(var(--fio)); }
-.etapa-item:hover { background: rgb(var(--cor) / var(--tinta-etapa)); }
-.etapa-item.ativa { background: rgb(var(--cor) / var(--tinta-etapa-forte)); }
+.etapa-item:hover { background: rgb(var(--cor) / var(--tinta-etapa)); border-color: rgb(var(--cor)); }
+.etapa-item.ativa { background: rgb(var(--cor) / var(--tinta-etapa-forte)); border-color: rgb(var(--cor)); }
+/* O nome da etapa quebra em duas linhas em vez de ser cortado: "Em
+   implantação" cabe inteiro e as nove etapas ficam na mesma fileira. */
 .etapa-item .nome {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 10.5px; color: rgb(var(--tinta2)); margin-bottom: 6px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: flex; align-items: flex-start; gap: 6px;
+  font-size: 12px; font-weight: 600; color: rgb(var(--tinta2)); margin-bottom: 6px;
+  line-height: 1.3; min-height: 2.6em;
 }
+.etapa-item .nome .ponto { margin-top: 5px; }
 .etapa-item .qtd {
-  font-family: "Instrument Serif", Georgia, serif;
-  font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums;
+  font-size: 22px; font-weight: 800; line-height: 1;
+  color: rgb(var(--tinta)); font-variant-numeric: tabular-nums;
 }
 
 /* ------------------------------------------------------------------ filtros */
@@ -231,20 +239,28 @@
 /* --------------------------------------------------------------- listagem */
 /* A lista é uma tabela de linhas finas: densidade alta, zero ornamento.
    A cor da etapa aparece só no fio da esquerda e no ponto. */
-.linhas { width: 100%; }
+.linhas {
+  width: 100%;
+  background: rgb(var(--superficie));
+  border: 1px solid rgb(var(--fio));
+  border-radius: var(--raio-cartao);
+  box-shadow: var(--sombra);
+  overflow: hidden;
+}
 .linha {
   display: grid;
-  grid-template-columns: 3px 1fr auto;
+  grid-template-columns: 4px 1fr auto;
   align-items: center;
   gap: 0 16px;
-  padding: 0;
+  padding: 0 18px 0 0;
   border-bottom: 1px solid rgb(var(--fio2));
   cursor: pointer;
   transition: background .12s;
 }
+.linha:last-child { border-bottom: none; }
 .linha:hover { background: rgb(var(--cor) / var(--tinta-etapa)); }
 .linha-cor { align-self: stretch; background: rgb(var(--cor)); opacity: .75; }
-.linha-corpo { padding: 13px 0; min-width: 0; }
+.linha-corpo { padding: 14px 0 14px 16px; min-width: 0; }
 /* Colunas de largura fixa, não flex: assim o nível, o valor em R$ e o botão
    ficam um debaixo do outro em TODAS as linhas — inclusive nas encerradas, que
    não têm nível nem botão e antes empurravam o valor para fora da coluna. */
@@ -282,38 +298,50 @@
 }
 
 .linha-nome {
-  font-size: 13.5px; font-weight: 500; color: rgb(var(--tinta));
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 700; color: rgb(var(--tinta));
+  overflow: hidden; white-space: nowrap;
 }
+.linha-nome > :first-child { overflow: hidden; text-overflow: ellipsis; }
 .linha-meta {
-  display: flex; gap: 14px; flex-wrap: wrap;
-  font-size: 11.5px; color: rgb(var(--apagado)); margin-top: 3px;
+  display: flex; gap: 14px; flex-wrap: wrap; align-items: center;
+  font-size: 12.5px; color: rgb(var(--apagado)); margin-top: 4px;
 }
 .linha-valor { font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
 
 /* nível de acompanhamento */
-.nivel { font-size: 11px; letter-spacing: .02em; white-space: nowrap; display: inline-flex; gap: 5px; align-items: center; }
-.nivel-pendente { color: #9a7b16; }
-.nivel-atrasada { color: #b4571f; }
-.nivel-critica  { color: rgb(var(--alerta)); font-weight: 500; }
-.nivel-acompanhando { color: rgb(var(--apagado)); }
-:root[data-tema="escuro"] .nivel-pendente { color: #d9b64f; }
-:root[data-tema="escuro"] .nivel-atrasada { color: #e08a4e; }
+/* Pílula de status, no padrão do grupo: fundo suave e borda da mesma cor. */
+.nivel {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 11px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 700; white-space: nowrap;
+  border: 1px solid transparent;
+}
+.nivel-acompanhando { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
+.nivel-pendente     { background: #fef9c3; color: #a16207; border-color: #fef08a; }
+.nivel-atrasada     { background: #ffedd5; color: #c2410c; border-color: #fed7aa; }
+.nivel-critica      { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+:root[data-tema="escuro"] .nivel-acompanhando { background: rgb(66 173 44 / .16); color: #86e07a; border-color: rgb(66 173 44 / .35); }
+:root[data-tema="escuro"] .nivel-pendente     { background: rgb(240 177 43 / .16); color: #f0cd72; border-color: rgb(240 177 43 / .35); }
+:root[data-tema="escuro"] .nivel-atrasada     { background: rgb(232 116 12 / .16); color: #f0a463; border-color: rgb(232 116 12 / .35); }
+:root[data-tema="escuro"] .nivel-critica      { background: rgb(196 50 74 / .18); color: #f0919f; border-color: rgb(196 50 74 / .4); }
 
 /* botão de verificar direto na linha */
 .btn-verificar {
   border: 1px solid rgb(var(--fio));
   background: rgb(var(--superficie));
-  padding: 5px 12px;
-  font-size: 11px;
-  letter-spacing: .04em;
-  border-radius: var(--raio);
+  color: rgb(var(--tinta));
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: var(--raio-botao);
   cursor: pointer;
   white-space: nowrap;
+  transition: background .15s, border-color .15s;
 }
-.btn-verificar:hover { border-color: rgb(var(--tinta)); background: rgb(var(--tinta)); color: rgb(var(--papel)); }
-.btn-verificar.feito { border-color: transparent; color: rgb(var(--apagado)); cursor: default; }
-.btn-verificar.feito:hover { background: transparent; color: rgb(var(--apagado)); }
+.btn-verificar:hover { border-color: rgb(var(--realce)); background: rgb(var(--realce)); color: #fff; }
+.btn-verificar.feito { border-color: transparent; background: transparent; color: rgb(var(--apagado)); cursor: default; }
+.btn-verificar.feito:hover { background: transparent; color: rgb(var(--apagado)); border-color: transparent; }
 
 .vazio {
   padding: 64px 20px; text-align: center; color: rgb(var(--apagado)); font-size: 13px;
@@ -342,7 +370,13 @@
   display: flex; flex-direction: column;
 }
 .ficha.aberta { transform: none; }
-.ficha-cabeca { padding: 26px 30px 20px; border-bottom: 1px solid rgb(var(--fio)); position: relative; }
+.ficha { box-shadow: -6px 0 24px rgb(0 0 0 / .1); background: rgb(var(--papel)); }
+.ficha-cabeca {
+  padding: 26px 30px 22px;
+  border-bottom: 1px solid rgb(var(--fio));
+  background: rgb(var(--superficie));
+  position: relative;
+}
 .ficha-corpo { overflow-y: auto; padding: 24px 30px 48px; flex: 1; }
 .ficha-fechar { position: absolute; top: 20px; right: 24px; }
 .ficha-secao { margin-bottom: 32px; }
@@ -353,9 +387,9 @@
 .trocador { display: flex; flex-wrap: wrap; gap: 6px; }
 .trocador button {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 11px; font-size: 11.5px;
+  padding: 7px 14px; font-size: 12.5px; font-weight: 600;
   border: 1px solid rgb(var(--fio)); border-radius: 999px;
-  background: none; cursor: pointer; color: rgb(var(--tinta2));
+  background: rgb(var(--superficie)); cursor: pointer; color: rgb(var(--tinta2));
   transition: all .14s;
 }
 .trocador button:hover { border-color: rgb(var(--cor)); color: rgb(var(--tinta)); }
@@ -368,13 +402,55 @@
 .mensagem-caixa {
   border: 1px solid rgb(var(--fio));
   border-radius: var(--raio);
-  padding: 14px 16px;
+  box-shadow: var(--sombra);
+  padding: 16px 18px;
   background: rgb(var(--superficie));
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: 13.5px;
+  line-height: 1.65;
   white-space: pre-wrap;
 }
-.mensagem-acoes { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.mensagem-acoes { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+
+/* Escolha do canal: WhatsApp (do dia a dia) ou e-mail (a versão formal).
+   Segmentado, para ficar claro que é uma coisa OU outra — não duas ações. */
+.canais {
+  display: inline-flex;
+  padding: 3px;
+  gap: 3px;
+  margin-bottom: 14px;
+  border: 1px solid rgb(var(--fio));
+  border-radius: 999px;
+  background: rgb(var(--superficie2));
+}
+.canal {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgb(var(--tinta2));
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.canal:hover { color: rgb(var(--azul)); }
+.canal.ativo {
+  background: rgb(var(--superficie));
+  color: rgb(var(--azul));
+  box-shadow: var(--sombra);
+}
+
+/* O assunto do e-mail vive fora do corpo, mas é copiado junto. */
+.mensagem-assunto {
+  border: 1px solid rgb(var(--fio));
+  border-bottom: none;
+  border-radius: var(--raio) var(--raio) 0 0;
+  background: rgb(var(--superficie2));
+  padding: 10px 18px;
+}
+.mensagem-assunto .rotulo { margin-bottom: 2px; font-size: 11px; color: rgb(var(--apagado)); }
+.mensagem-assunto + .mensagem-caixa { border-radius: 0 0 var(--raio) var(--raio); }
+.mensagem-assunto div { font-size: 13.5px; font-weight: 700; color: rgb(var(--tinta)); }
 
 /* linha do tempo */
 .tempo { border-left: 1px solid rgb(var(--fio)); padding-left: 18px; margin-left: 3px; }
@@ -397,20 +473,26 @@
 }
 .modal-caixa {
   width: min(640px, 100%);
-  background: rgb(var(--papel));
+  background: rgb(var(--superficie));
   border: 1px solid rgb(var(--fio));
-  border-radius: var(--raio);
+  border-radius: var(--raio-cartao);
+  box-shadow: 0 12px 40px rgb(0 0 0 / .18);
 }
 .modal-cabeca { padding: 24px 28px 18px; border-bottom: 1px solid rgb(var(--fio)); display: flex; align-items: baseline; gap: 14px; }
 .modal-corpo { padding: 24px 28px; }
 .modal-rodape { padding: 16px 28px; border-top: 1px solid rgb(var(--fio)); display: flex; gap: 10px; justify-content: flex-end; align-items: center; }
 .modal-erro {
-  padding: 10px 13px; border-left: 2px solid rgb(var(--alerta));
-  color: rgb(var(--alerta)); font-size: 12.5px; margin-bottom: 16px;
+  padding: 13px 16px;
+  border: 1px solid rgb(var(--alerta) / .35);
+  border-radius: var(--raio);
+  background: rgb(var(--alerta) / .08);
+  color: rgb(var(--alerta));
+  font-size: 13px; font-weight: 600;
+  margin-bottom: 18px;
 }
-.dica { font-size: 11px; color: rgb(var(--apagado)); margin-top: 4px; }
+.dica { font-size: 11.5px; color: rgb(var(--apagado)); margin-top: 4px; }
 .dica.ruim { color: rgb(var(--alerta)); }
-.dica.boa { color: #2f7d55; }
+.dica.boa { color: rgb(var(--sucesso)); }
 
 /* ------------------------------------------------------------------ master */
 .tranca {
@@ -420,24 +502,32 @@
 .tranca p { color: rgb(var(--apagado)); font-size: 12.5px; margin: 0 0 26px; }
 .tranca .campo { text-align: center; }
 
-.periodo { display: flex; gap: 2px; border: 1px solid rgb(var(--fio)); border-radius: var(--raio); overflow: hidden; }
-.periodo button {
-  padding: 6px 14px; font-size: 11.5px; background: none; border: none;
-  cursor: pointer; color: rgb(var(--apagado));
+.periodo {
+  /* inline-flex: o segmentado encolhe até o conteúdo. Com `flex` a faixa
+     cinza atravessava a tela inteira atrás das abas do Master. */
+  display: inline-flex; gap: 3px; padding: 3px;
+  border: 1px solid rgb(var(--fio)); border-radius: 999px;
+  background: rgb(var(--superficie2));
 }
-.periodo button.ativo { background: rgb(var(--tinta)); color: rgb(var(--papel)); }
+.periodo button {
+  padding: 6px 16px; font-size: 12.5px; font-weight: 600;
+  background: none; border: none; border-radius: 999px;
+  cursor: pointer; color: rgb(var(--tinta2));
+}
+.periodo button.ativo { background: rgb(var(--realce)); color: #fff; }
 
 /* barra de taxa: só um traço, sem gráfico */
-.barra { height: 2px; background: rgb(var(--fio)); position: relative; width: 90px; display: inline-block; vertical-align: middle; }
-.barra i { position: absolute; inset: 0 auto 0 0; background: rgb(var(--tinta)); }
+.barra { height: 6px; border-radius: 999px; background: rgb(var(--fio)); position: relative; width: 90px; display: inline-block; vertical-align: middle; overflow: hidden; }
+.barra i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: rgb(var(--azul-icone)); }
 .barra.baixa i { background: rgb(var(--alerta)); }
 
 /* --------------------------------------------------------------- avisinho */
 .aviso {
   position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 12px);
   z-index: 90; padding: 10px 18px;
-  background: rgb(var(--tinta)); color: rgb(var(--papel));
-  border-radius: var(--raio); font-size: 12.5px;
+  background: rgb(var(--azul-escuro)); color: #fff;
+  border-radius: var(--raio); font-size: 13px; font-weight: 600;
+  box-shadow: var(--sombra-alta);
   opacity: 0; pointer-events: none; transition: all .2s; max-width: 90vw;
 }
 .aviso.visivel { opacity: 1; transform: translate(-50%, 0); }
@@ -453,3 +543,18 @@
   .linha-fim { grid-column: 2; padding-top: 0; justify-content: flex-start; }
   .ficha { width: 100vw; }
 }
+
+/* ------------------------------------------------------------------ tabelas
+   No padrão do grupo todo conteúdo mora num cartão branco — inclusive as
+   tabelas do Master, que antes ficavam soltas sobre o fundo cinza. */
+table {
+  background: rgb(var(--superficie));
+  border: 1px solid rgb(var(--fio));
+  border-radius: var(--raio-cartao);
+  box-shadow: var(--sombra);
+  overflow: hidden;
+}
+th:first-child, td:first-child { padding-left: 20px; }
+th:last-child,  td:last-child  { padding-right: 20px; }
+th { padding-top: 16px; }
+tbody tr:last-child td { border-bottom: none; }
