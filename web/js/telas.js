@@ -388,6 +388,7 @@ async function master() {
     ["relatorios", "Relatórios"],
     ["usuarios", "Usuários"],
     ["corretores", "Corretores"],
+    ["sistema", "Sistema"],
   ];
 
   alvo().innerHTML = `
@@ -410,7 +411,7 @@ async function master() {
     redesenhar();
   }));
 
-  const corpo = { visao: masterVisao, acompanhamento: acompanhamento, relatorios: relatorios, usuarios: usuarios, corretores: corretores };
+  const corpo = { visao: masterVisao, acompanhamento: acompanhamento, relatorios: relatorios, usuarios: usuarios, corretores: corretores, sistema: sistema };
   await (corpo[masterSecao] || masterVisao)();
 }
 
@@ -714,6 +715,70 @@ async function corretores() {
       avisar(`${r.importados} corretor(es) novos · ${r.atualizados} atualizado(s).`);
       redesenhar();
     } catch (erro) { avisar(erro.message, "erro"); }
+  });
+}
+
+const NOME_TABELA = {
+  propostas: "Propostas",
+  historico: "Histórico de mudanças",
+  verificacoes: "Verificações",
+  dia_resumo: "Fechamentos de dia",
+  mensagens_uso: "Mensagens já usadas",
+  corretores: "Corretores",
+  supervisores: "Supervisores",
+  usuarios: "Usuários do ADM",
+};
+
+/**
+ * Sistema · zerar. Existe na tela, e não só no terminal, porque recomeçar o
+ * preenchimento é decisão de quem usa o sistema — não de quem sabe rodar npm.
+ */
+async function sistema() {
+  const { tabelas } = await api.master.conteudo();
+  const total = Object.values(tabelas).reduce((a, b) => a + b, 0);
+
+  $("#master-corpo").innerHTML = `
+    <div class="secao" style="margin-top:6px">O que existe hoje no sistema</div>
+    <table style="max-width:420px">
+      <tbody>
+        ${Object.entries(NOME_TABELA).map(([t, nome]) => `
+          <tr><td>${esc(nome)}</td><td class="num mono">${numero(tabelas[t] || 0)}</td></tr>`).join("")}
+        <tr><td><b>Total</b></td><td class="num mono"><b>${numero(total)}</b></td></tr>
+      </tbody>
+    </table>
+
+    <div class="secao" style="margin-top:34px">Zerar o sistema</div>
+    <p class="dica" style="margin:0 0 14px;max-width:560px">
+      Apaga todos os registros e deixa o sistema em branco para começar o preenchimento
+      do zero. A estrutura continua igual — só o conteúdo sai. As planilhas também
+      deixam de ser importadas sozinhas, senão tudo voltaria na próxima subida.
+      <b>Não tem como desfazer.</b> Se quiser guardar o que existe, copie o arquivo
+      <span class="mono">dados/sistema.db</span> antes.
+    </p>
+    <label class="rotulo" for="zerar-confirma">Digite ZERAR para confirmar</label>
+    <input id="zerar-confirma" class="campo" style="max-width:220px" placeholder="ZERAR" autocomplete="off">
+    <div style="margin-top:12px">
+      <button class="btn btn-perigo btn-mini" id="zerar-agora" disabled>Apagar tudo e começar do zero</button>
+    </div>`;
+
+  const campo = $("#zerar-confirma");
+  const botao = $("#zerar-agora");
+  campo.addEventListener("input", () => {
+    botao.disabled = campo.value.trim().toUpperCase() !== "ZERAR";
+  });
+
+  botao.addEventListener("click", async () => {
+    botao.disabled = true;
+    try {
+      const r = await api.master.zerar(campo.value);
+      avisar(`${numero(r.apagados)} registros apagados. O sistema está em branco.`);
+      // recarrega a página inteira: filtros, contadores e listas em memória
+      // ainda falam de dados que não existem mais.
+      setTimeout(() => location.reload(), 900);
+    } catch (erro) {
+      avisar(erro.message, "erro");
+      botao.disabled = false;
+    }
   });
 }
 

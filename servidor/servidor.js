@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 
 import { abrirBanco } from "./banco.js";
 import { prepararSePreciso } from "./preparar.js";
+import { contar, zerar } from "./zerar.js";
 import {
   ErroDeUso, alterarUsuario, atribuirAdm, conferirDocumento, config,
   criarProposta, criarUsuario, editarProposta, implantadasPorMes,
@@ -232,6 +233,20 @@ async function rotaApi(req, res, url) {
     if (caminho === "/master/corretores/csv" && metodo === "POST") {
       const corpo = await lerCorpo(req);
       return importarCorretoresCSV(db, corpo.csv || "");
+    }
+    if (caminho === "/master/conteudo" && metodo === "GET") {
+      return { tabelas: contar(db) };
+    }
+    // Zerar o sistema pela tela, sem terminal. A confirmação digitada não é
+    // burocracia: é a única barreira entre um clique errado e 2 mil propostas.
+    if (caminho === "/master/zerar" && metodo === "POST") {
+      const corpo = await lerCorpo(req);
+      if (String(corpo.confirmacao || "").trim().toUpperCase() !== "ZERAR") {
+        throw new ErroDeUso('Para apagar tudo, digite ZERAR na confirmação.');
+      }
+      const antes = contar(db);
+      zerar(db);
+      return { apagados: Object.values(antes).reduce((a, b) => a + b, 0), antes };
     }
   }
 

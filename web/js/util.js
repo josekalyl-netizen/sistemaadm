@@ -168,6 +168,8 @@ export const api = {
     historico: (f) => pedir(`/api/master/historico?${query(f)}`),
     relatorio: (f) => pedir(`/api/master/relatorio?${query(f)}`),
     corretoresCSV: (csv) => pedir("/api/master/corretores/csv", { method: "POST", corpo: { csv } }),
+    conteudo: () => pedir("/api/master/conteudo"),
+    zerar: (confirmacao) => pedir("/api/master/zerar", { method: "POST", corpo: { confirmacao } }),
   },
 };
 

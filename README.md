@@ -36,6 +36,10 @@ npm run zerar -- --agora                # deixa o sistema em branco
 
 ### Deixar o sistema em branco
 
+Pela tela: **Master › Sistema**. A seção mostra quanto existe hoje em cada
+tabela e, para apagar, exige que se digite `ZERAR` na confirmação.
+
+Pelo terminal: `npm run zerar` mostra o que existe sem apagar nada, e
 `npm run zerar -- --agora` apaga **todos** os registros — propostas, histórico,
 verificações, corretores e usuários — e mantém a estrutura intacta. Não tem como
 desfazer: para guardar o que existe, copie `dados/sistema.db` antes.

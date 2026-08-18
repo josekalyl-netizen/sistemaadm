@@ -269,6 +269,10 @@ textarea.campo { resize: vertical; min-height: 76px; }
 
 .btn-mini { padding: 6px 12px; font-size: 12.5px; }
 
+/* Ação destrutiva: veste a cor do alerta para ninguém clicar por engano. */
+.btn-perigo { border-color: rgb(var(--alerta) / .45); color: rgb(var(--alerta)); }
+.btn-perigo:hover:not(:disabled) { background: rgb(var(--alerta)); border-color: rgb(var(--alerta)); color: #fff; }
+
 /* ------------------------------------------------------------------ tabela */
 table { width: 100%; border-collapse: collapse; }
 th {
