@@ -17,3 +17,7 @@ node_modules/
 
 # senha da Área Master (nunca versionar)
 dados/senha-master.txt
+
+# cache de bytecode do Python (gerado ao rodar o conversor)
+__pycache__/
+*.pyc
