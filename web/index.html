@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sistema Administrativo Inteligente — Grupo W3G</title>
-<meta name="theme-color" content="#0F2A52">
+<meta name="theme-color" content="#FAFAF8">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/sistema.css">
 <script>
@@ -22,124 +22,49 @@
 </head>
 <body>
 
-<header class="cabecalho">
-  <div class="marca">
-    <div class="marca-selo">W3G</div>
-    <div>
-      <div class="marca-nome">Sistema Administrativo Inteligente</div>
-      <div class="marca-sub">Grupo W3G · acompanhamento de propostas</div>
+<header class="topo">
+  <div class="app" style="padding-bottom:0">
+    <div class="topo-linha">
+      <div class="marca">
+        <span class="marca-w3g">W3G</span>
+        <span class="marca-nome">Sistema Administrativo</span>
+      </div>
+
+      <!-- BUSCA GLOBAL: acha a proposta em qualquer etapa -->
+      <div class="busca">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
+        </svg>
+        <input id="busca" class="campo" type="search" autocomplete="off"
+               placeholder="Buscar empresa, CNPJ, proposta, corretor…" aria-label="Busca global">
+      </div>
+
+      <div class="topo-acoes">
+        <!-- USUÁRIO: filtra o sistema inteiro para a carteira de uma ADM -->
+        <div class="seletor-usuario">
+          <span class="rotulo" style="margin:0">Usuário</span>
+          <select id="usuario" aria-label="Usuário">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <button id="btn-nova" class="btn">+ Proposta</button>
+        <button id="btn-tema" class="btn btn-limpo" title="Claro / escuro" aria-label="Alternar tema">◐</button>
+      </div>
     </div>
-  </div>
 
-  <!-- BUSCA GLOBAL: acha a proposta em qualquer etapa -->
-  <div class="busca-caixa">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>
-    </svg>
-    <input id="busca" class="campo busca-campo" type="search" autocomplete="off"
-           placeholder="Buscar estipulante, CNPJ, proposta, corretor, operadora…"
-           aria-label="Busca global">
-    <button id="busca-limpar" class="busca-limpar oculto" title="Limpar busca" aria-label="Limpar busca">✕</button>
-  </div>
-
-  <div class="cabecalho-acoes">
-    <select id="supervisor-visao" class="campo" style="width:auto;min-width:160px" aria-label="Visão por supervisor">
-      <option value="">Todos os supervisores</option>
-    </select>
-    <button id="btn-nova" class="btn btn-principal">+ Nova proposta</button>
-    <button id="btn-tema" class="btn btn-limpo btn-mini" title="Alternar claro/escuro" aria-label="Alternar tema">◐</button>
+    <nav class="abas" id="abas"></nav>
   </div>
 </header>
 
-<main class="app">
+<main class="app" id="tela"></main>
 
-  <!-- RESUMO: uma linha só, sem repetir o que as etapas já mostram -->
-  <section class="card resumo" id="resumo" aria-label="Resumo"></section>
-
-  <!-- ÁREAS POR ETAPA: clicar filtra a lista -->
-  <section class="etapas" id="etapas" aria-label="Etapas do processo"></section>
-
-  <!-- FILTROS -->
-  <section class="card filtros">
-    <div class="filtros-cabeca" id="filtros-cabeca" role="button" tabindex="0" aria-expanded="false">
-      <span>Filtros</span>
-      <span class="resto" id="filtros-resumo"></span>
-      <span class="muted" id="filtros-seta">▾</span>
-    </div>
-
-    <div id="filtros-painel" class="oculto">
-      <div class="filtros-grade">
-        <div>
-          <label class="rotulo" for="f-supervisor">Supervisor</label>
-          <select id="f-supervisor" class="campo"><option value="">Todos</option></select>
-        </div>
-        <div>
-          <label class="rotulo" for="f-operadora">Operadora</label>
-          <select id="f-operadora" class="campo"><option value="">Todas</option></select>
-        </div>
-        <div>
-          <label class="rotulo" for="f-corretor">Corretor</label>
-          <select id="f-corretor" class="campo"><option value="">Todos</option></select>
-        </div>
-        <div>
-          <label class="rotulo" for="f-responsavel">Responsável</label>
-          <select id="f-responsavel" class="campo"><option value="">Todos</option></select>
-        </div>
-        <div>
-          <label class="rotulo" for="f-cadastrado">Cadastrado</label>
-          <select id="f-cadastrado" class="campo">
-            <option value="">Tanto faz</option>
-            <option value="sim">Sim</option>
-            <option value="nao">Não</option>
-          </select>
-        </div>
-        <div>
-          <label class="rotulo" for="f-de">Emissão — de</label>
-          <input id="f-de" class="campo" type="date">
-        </div>
-        <div>
-          <label class="rotulo" for="f-ate">Emissão — até</label>
-          <input id="f-ate" class="campo" type="date">
-        </div>
-      </div>
-
-      <div class="filtros-rodape">
-        <div id="filtros-ativos" style="display:flex;gap:6px;flex-wrap:wrap;flex:1"></div>
-        <button id="btn-limpar-filtros" class="btn btn-limpo btn-mini">Limpar tudo</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- LISTA -->
-  <div class="lista-cabeca">
-    <h2 class="titulo" id="lista-titulo">Todas as propostas</h2>
-    <span class="lista-contagem" id="lista-contagem"></span>
-    <div class="ordenar">
-      <label class="rotulo" for="ordem" style="margin:0">Ordenar</label>
-      <select id="ordem" class="campo" style="width:auto">
-        <option value="recentes">Atualizadas recentemente</option>
-        <option value="etapa">Etapa do processo</option>
-        <option value="data">Data de emissão</option>
-        <option value="valor">Valor</option>
-        <option value="empresa">Estipulante (A–Z)</option>
-      </select>
-    </div>
-  </div>
-
-  <section class="cards" id="cards" aria-live="polite"></section>
-  <div class="paginacao" id="paginacao"></div>
-</main>
-
-<!-- FICHA DA PROPOSTA -->
 <div class="veu" id="veu"></div>
 <aside class="ficha" id="ficha" aria-hidden="true" aria-label="Ficha da proposta">
   <div class="ficha-cabeca" id="ficha-cabeca"></div>
   <div class="ficha-corpo" id="ficha-corpo"></div>
 </aside>
 
-<!-- MODAL DE CADASTRO -->
 <div class="modal oculto" id="modal"></div>
-
 <div class="aviso" id="aviso" role="status"></div>
 
 <script type="module" src="/js/app.js"></script>

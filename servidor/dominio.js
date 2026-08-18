@@ -17,17 +17,21 @@
  * Cada etapa tem UMA cor, e é ela que tinge o card na lista. Os tons são
  * fracos de propósito: a tela mostra centenas de cards e cor forte cansa a
  * vista. `cor` é o traço e o rótulo; o fundo usa a mesma cor com pouca
- * opacidade — ver `--etapa-cor` em web/css/sistema.css.
+ * opacidade — ver `--cor` em web/css/sistema.css.
+ *
+ * `prazo` é de quantos em quantos dias a proposta precisa ser verificada pela
+ * ADM responsável. Etapas encerradas (implantada, cancelada) têm prazo null:
+ * saem da fila de acompanhamento.
  */
 export const ETAPAS = [
-  { codigo: "nova",           nome: "Nova",             ordem: 1, cor: "#9AA7BC", descricao: "Propostas recém cadastradas." },
-  { codigo: "em_analise",     nome: "Em análise",       ordem: 2, cor: "#E8877D", descricao: "Propostas sendo trabalhadas pelo operacional." },
-  { codigo: "cotacao",        nome: "Cotação",          ordem: 3, cor: "#7FC6D9", descricao: "Propostas em processo de cotação." },
-  { codigo: "enviada",        nome: "Proposta enviada", ordem: 4, cor: "#A79BD4", descricao: "Propostas já enviadas ao cliente." },
-  { codigo: "pendente",       nome: "Pendente",         ordem: 5, cor: "#E3C46A", descricao: "Propostas que possuem alguma pendência." },
-  { codigo: "em_implantacao", nome: "Em implantação",   ordem: 6, cor: "#D8A97E", descricao: "Propostas que já avançaram para implantação." },
-  { codigo: "implantada",     nome: "Implantada",       ordem: 7, cor: "#84C5A3", descricao: "Propostas cuja implantação foi concluída." },
-  { codigo: "cancelada",      nome: "Cancelada",        ordem: 8, cor: "#C96F6F", descricao: "Processos encerrados sem implantação." },
+  { codigo: "nova",           nome: "Nova",             ordem: 1, cor: "#9AA7BC", prazo: 1, descricao: "Propostas recém cadastradas." },
+  { codigo: "em_analise",     nome: "Em análise",       ordem: 2, cor: "#E8877D", prazo: 1, descricao: "Propostas sendo trabalhadas pelo operacional." },
+  { codigo: "cotacao",        nome: "Cotação",          ordem: 3, cor: "#7FC6D9", prazo: 1, descricao: "Propostas em processo de cotação." },
+  { codigo: "enviada",        nome: "Proposta enviada", ordem: 4, cor: "#A79BD4", prazo: 1, descricao: "Propostas já enviadas ao cliente." },
+  { codigo: "pendente",       nome: "Pendente",         ordem: 5, cor: "#E3C46A", prazo: 1, descricao: "Propostas que possuem alguma pendência." },
+  { codigo: "em_implantacao", nome: "Em implantação",   ordem: 6, cor: "#D8A97E", prazo: 1, descricao: "Propostas que já avançaram para implantação." },
+  { codigo: "implantada",     nome: "Implantada",       ordem: 7, cor: "#84C5A3", prazo: null, descricao: "Propostas cuja implantação foi concluída." },
+  { codigo: "cancelada",      nome: "Cancelada",        ordem: 8, cor: "#C96F6F", prazo: null, descricao: "Processos encerrados sem implantação." },
 ];
 
 export const CODIGOS_ETAPA = ETAPAS.map((e) => e.codigo);
@@ -223,4 +227,56 @@ export function chaveNatural({ proposta, documento, estipulante }) {
   const nome = normalizar(estipulante).slice(0, 40);
   const propostaInutil = !num || /^0+$/.test(num);
   return propostaInutil ? `N|${doc}|${nome}` : `P|${num}|${doc}`;
+}
+
+// ------------------------------------------------- acompanhamento diário
+
+/**
+ * Níveis de acompanhamento. A diferença entre "não acompanhou hoje" e "está
+ * atrasada" é o que permite o Master separar pendência operacional (normal,
+ * acontece todo dia) de problema real.
+ *
+ * `dias` é o número de dias corridos desde a última verificação — ou desde o
+ * cadastro, quando a proposta nunca foi verificada.
+ */
+export const NIVEIS = [
+  { codigo: "acompanhando", nome: "Acompanhando", sinal: "🟢", cor: "#84C5A3", desde: 0, ate: 0 },
+  { codigo: "pendente",     nome: "Pendente",     sinal: "🟡", cor: "#E3C46A", desde: 1, ate: 1 },
+  { codigo: "atrasada",     nome: "Atrasada",     sinal: "🔴", cor: "#D8834E", desde: 2, ate: 4 },
+  { codigo: "critica",      nome: "Crítica",      sinal: "🔴", cor: "#C0392B", desde: 5, ate: Infinity },
+  { codigo: "encerrada",    nome: "Encerrada",    sinal: "⚪", cor: "#9AA7BC", desde: null, ate: null },
+];
+
+export const NIVEIS_EM_ALERTA = ["atrasada", "critica"];
+
+export function nivel(codigo) {
+  return NIVEIS.find((n) => n.codigo === codigo) || null;
+}
+
+/**
+ * Nível de acompanhamento de uma proposta.
+ * Etapas encerradas (implantada, cancelada) não exigem acompanhamento.
+ */
+export function nivelAcompanhamento({ status_atual, dias_sem_verificar }) {
+  if (!etapa(status_atual)?.prazo) return "encerrada";
+  const dias = Number(dias_sem_verificar);
+  if (!Number.isFinite(dias)) return "critica";
+  if (dias <= 0) return "acompanhando";
+  if (dias === 1) return "pendente";
+  if (dias <= 4) return "atrasada";
+  return "critica";
+}
+
+/** "AAAA-MM-DD" de hoje, no fuso local da máquina (não em UTC). */
+export function hoje() {
+  const agora = new Date();
+  const local = new Date(agora.getTime() - agora.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+/** Diferença em dias corridos entre duas datas "AAAA-MM-DD". */
+export function diasEntre(de, ate) {
+  if (!de || !ate) return null;
+  const ms = Date.parse(`${ate}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`);
+  return Math.round(ms / 86400000);
 }

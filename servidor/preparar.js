@@ -12,7 +12,7 @@
  * Dá para apontar a pasta na mão:  PLANILHAS=/caminho/da/pasta npm start
  */
 
-import { abrirBanco, esquemaDesatualizado, fecharBanco } from "./banco.js";
+import { abrirBanco, bancoFoiRecriado } from "./banco.js";
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
@@ -105,15 +105,11 @@ function converterPlanilhas(python, arquivos) {
  * para usar o sistema vazio e cadastrar as propostas na mão.
  */
 export async function prepararSePreciso() {
-  let db = abrirBanco();
+  const db = abrirBanco();
 
-  // Banco de uma versão anterior das colunas: refaz a partir das planilhas em
-  // vez de quebrar. Os dados vêm todos da planilha, então nada se perde.
-  if (esquemaDesatualizado(db)) {
-    log("\n  O banco é de uma versão anterior do sistema — refazendo a partir das planilhas.");
-    db.exec("DROP TABLE IF EXISTS historico; DROP TABLE IF EXISTS vidas; DROP TABLE IF EXISTS propostas;");
-    fecharBanco();
-    db = abrirBanco();
+  // O banco se recria sozinho quando é de uma versão anterior (ver banco.js).
+  if (bancoFoiRecriado()) {
+    log("\n  O banco era de uma versão anterior do sistema — refazendo a partir das planilhas.");
   }
 
   const quantas = db.prepare("SELECT COUNT(*) AS n FROM propostas").get().n;

@@ -15,9 +15,19 @@ import { fileURLToPath } from "node:url";
 import { abrirBanco } from "./banco.js";
 import { prepararSePreciso } from "./preparar.js";
 import {
-  ErroDeUso, conferirDocumento, config, criarProposta, criarSupervisor,
-  editarProposta, listarPropostas, mudarStatus, obterProposta, painel,
+  ErroDeUso, alterarUsuario, atribuirAdm, conferirDocumento, config,
+  criarProposta, criarUsuario, editarProposta, listarPropostas, listarUsuarios,
+  mudarStatus, obterProposta,
 } from "./api.js";
+import {
+  fecharDiasPassados, historicoDiario, porUsuario, relatorio, situacaoAtual,
+  verificar,
+} from "./acompanhamento.js";
+import { escolherMensagem, registrarUso } from "./mensagens.js";
+import {
+  COOKIE_LIMPO, cookieDeSessao, entrar, sair, senhaMaster, sessaoValida,
+  tokenDoPedido,
+} from "./autenticacao.js";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const PASTA_WEB = join(AQUI, "..", "web");
@@ -38,6 +48,11 @@ const TIPOS = {
 // antes de pegar o banco: se o esquema for antigo, a preparação o recria.
 await prepararSePreciso();
 const db = abrirBanco();
+
+// Fecha os dias que passaram enquanto o sistema esteve desligado e garante que
+// a senha da Área Master exista (na primeira vez, ela é criada e impressa).
+fecharDiasPassados(db);
+senhaMaster();
 
 function responder(res, status, corpo) {
   const texto = JSON.stringify(corpo);
@@ -70,8 +85,9 @@ async function rotaApi(req, res, url) {
   const metodo = req.method;
   const filtros = Object.fromEntries(url.searchParams);
 
+  // ------------------------------------------------------------ básico
   if (caminho === "/config" && metodo === "GET") return config(db);
-  if (caminho === "/painel" && metodo === "GET") return painel(db, filtros);
+
   if (caminho === "/propostas" && metodo === "GET") return listarPropostas(db, filtros);
 
   if (caminho === "/propostas" && metodo === "POST") {
@@ -80,15 +96,33 @@ async function rotaApi(req, res, url) {
     return criarProposta(db, corpo, corpo.autor);
   }
 
-  if (caminho === "/supervisores" && metodo === "POST") {
-    res.statusCode = 201;
-    return criarSupervisor(db, await lerCorpo(req));
-  }
-
   if (caminho === "/conferir-documento" && metodo === "GET") {
     return conferirDocumento(filtros.documento || "");
   }
 
+  // ------------------------------------------------ dashboard da ADM
+  // Todos os números respeitam o usuário selecionado no topo da tela.
+  if (caminho === "/painel" && metodo === "GET") {
+    return {
+      ...situacaoAtual(db, { usuario_id: filtros.usuario_id }),
+      sem_responsavel: db.prepare("SELECT COUNT(*) AS n FROM propostas WHERE usuario_id IS NULL").get().n,
+    };
+  }
+
+  // --------------------------------------------------------- usuários
+  // A lista é aberta (é ela que alimenta o seletor do topo); cadastrar e
+  // desativar são atos do Master.
+  if (caminho === "/usuarios" && metodo === "GET") return listarUsuarios(db);
+
+  if (caminho === "/usuarios" && metodo === "POST") {
+    if (!sessaoValida(tokenDoPedido(req))) {
+      throw new ErroDeUso("Só o Master cadastra usuários. Entre na Área Master.", 401);
+    }
+    res.statusCode = 201;
+    return criarUsuario(db, await lerCorpo(req));
+  }
+
+  // ------------------------------------------------------- propostas
   let m;
   if ((m = caminho.match(/^\/propostas\/(\d+)$/))) {
     if (metodo === "GET") return obterProposta(db, m[1]);
@@ -100,6 +134,92 @@ async function rotaApi(req, res, url) {
 
   if ((m = caminho.match(/^\/propostas\/(\d+)\/status$/)) && metodo === "PATCH") {
     return mudarStatus(db, m[1], await lerCorpo(req));
+  }
+
+  // O botão "Verificar proposta": o coração do acompanhamento diário.
+  if ((m = caminho.match(/^\/propostas\/(\d+)\/verificar$/)) && metodo === "POST") {
+    const corpo = await lerCorpo(req);
+    const feito = verificar(db, m[1], corpo);
+    if (!feito) throw new ErroDeUso("Proposta não encontrada.", 404);
+    return { ...feito, proposta: obterProposta(db, m[1]) };
+  }
+
+  // Mensagem pronta para o corretor.
+  if ((m = caminho.match(/^\/propostas\/(\d+)\/mensagem$/))) {
+    const proposta = obterProposta(db, m[1]);
+    if (metodo === "GET") {
+      const escolhida = escolherMensagem(db, proposta, {
+        pendencia: filtros.pendencia || "",
+        indice: filtros.indice === undefined ? null : Number(filtros.indice),
+      });
+      if (!escolhida) throw new ErroDeUso("Não há mensagem para esta etapa.", 404);
+      return escolhida;
+    }
+    // POST = a ADM copiou; registra para não repetir com o mesmo corretor
+    if (metodo === "POST") {
+      const corpo = await lerCorpo(req);
+      registrarUso(db, proposta, corpo.indice);
+      return { registrado: true };
+    }
+  }
+
+  if ((m = caminho.match(/^\/propostas\/(\d+)\/verificacoes$/)) && metodo === "GET") {
+    return obterProposta(db, m[1]).verificacoes;
+  }
+
+  if (caminho === "/propostas/atribuir" && metodo === "POST") {
+    return atribuirAdm(db, await lerCorpo(req));
+  }
+
+  // ----------------------------------------------------------- master
+  // Tudo abaixo exige a sessão criada com a senha da Área Master.
+  if (caminho === "/master/entrar" && metodo === "POST") {
+    const corpo = await lerCorpo(req);
+    const sessao = entrar(corpo.senha);
+    if (!sessao) throw new ErroDeUso("Senha incorreta.", 401);
+    res.setHeader("Set-Cookie", cookieDeSessao(sessao.token));
+    return { entrou: true };
+  }
+
+  if (caminho === "/master/sair" && metodo === "POST") {
+    sair(tokenDoPedido(req));
+    res.setHeader("Set-Cookie", COOKIE_LIMPO);
+    return { entrou: false };
+  }
+
+  if (caminho === "/master/sessao" && metodo === "GET") {
+    return { entrou: sessaoValida(tokenDoPedido(req)) };
+  }
+
+  if (caminho.startsWith("/master/")) {
+    if (!sessaoValida(tokenDoPedido(req))) {
+      throw new ErroDeUso("Área Master: é preciso entrar com a senha.", 401);
+    }
+
+    if (caminho === "/master/produtividade" && metodo === "GET") {
+      fecharDiasPassados(db);
+      return porUsuario(db);
+    }
+    if (caminho === "/master/historico" && metodo === "GET") {
+      return {
+        dias: historicoDiario(db, {
+          usuario_id: filtros.usuario_id || null,
+          de: filtros.de,
+          ate: filtros.ate,
+        }),
+      };
+    }
+    if (caminho === "/master/relatorio" && metodo === "GET") {
+      return relatorio(db, {
+        periodo: filtros.periodo,
+        de: filtros.de,
+        ate: filtros.ate,
+        usuario_id: filtros.usuario_id || null,
+      });
+    }
+    if ((m = caminho.match(/^\/master\/usuarios\/(\d+)$/)) && metodo === "PATCH") {
+      return alterarUsuario(db, m[1], await lerCorpo(req));
+    }
   }
 
   throw new ErroDeUso("Rota não encontrada.", 404);
@@ -157,7 +277,8 @@ servidor.listen(PORTA, () => {
   console.log(`  │  Grupo W3G                                   │`);
   console.log(`  └──────────────────────────────────────────────┘`);
   console.log(`\n  Abra no navegador:  ${endereco}`);
-  console.log(`  ${n} propostas no sistema`);
+  const alerta = situacaoAtual(db).em_alerta;
+  console.log(`  ${n} propostas · ${alerta} em alerta de acompanhamento`);
   console.log(`\n  Para parar: Ctrl + C\n`);
   abrirNavegador(endereco);
 });

@@ -1,114 +1,141 @@
 /* ============================================================
    Sistema Administrativo Inteligente — Grupo W3G
-   Base visual: sóbria, clara, sem ornamento. Azul institucional
-   para ações e texto de destaque; o resto é cinza e branco, para
-   a cor das etapas ser a única cor forte da tela.
+   Base visual minimalista: papel off-white, tinta quase preta,
+   fios de cabelo no lugar de bordas, nenhuma sombra. A única cor
+   da tela é a da etapa da proposta.
    ============================================================ */
 
 :root {
-  /* — tema CLARO (padrão) — */
-  --c-canvas: 245 247 250;   /* fundo da página */
-  --c-paper: 255 255 255;    /* painéis e cards */
-  --c-ink: 24 34 51;         /* texto principal */
-  --c-ink2: 71 85 105;       /* texto secundário */
-  --c-muted: 122 137 158;    /* texto apagado */
-  --c-line: 224 230 238;     /* bordas */
-  --c-line2: 238 242 247;    /* bordas sutis */
-  --c-marca: 15 42 82;       /* azul W3G */
-  --c-acao: 29 78 137;       /* azul de ação (botões, links) */
-  --c-alerta: 190 55 45;
+  /* — claro (padrão) — */
+  --papel: 250 250 248;      /* fundo */
+  --superficie: 255 255 255; /* cartões */
+  --tinta: 20 22 26;         /* texto */
+  --tinta2: 82 86 94;        /* texto secundário */
+  --apagado: 138 138 133;    /* rótulos, metadados */
+  --fio: 228 227 222;        /* linha divisória */
+  --fio2: 240 239 235;       /* linha ainda mais leve */
+  --realce: 20 22 26;        /* ação principal (preto tinta) */
+  --alerta: 168 60 50;
 
-  --sombra: 0 1px 2px rgba(20, 35, 60, .05);
-  --sombra-alta: 0 4px 14px -6px rgba(20, 35, 60, .18);
-  --sombra-flutua: 0 18px 40px -16px rgba(20, 35, 60, .28);
-
-  /* força do tingimento por etapa (fraco de propósito) */
-  --tinta: .13;
-  --tinta-forte: .20;
+  --raio: 2px;
+  --tinta-etapa: .10;        /* tingimento do card por etapa */
+  --tinta-etapa-forte: .18;
 }
 
 :root[data-tema="escuro"] {
-  --c-canvas: 15 20 28;
-  --c-paper: 22 29 40;
-  --c-ink: 232 238 246;
-  --c-ink2: 186 198 214;
-  --c-muted: 130 145 165;
-  --c-line: 42 53 70;
-  --c-line2: 33 43 58;
-  --c-marca: 210 224 242;
-  --c-acao: 122 170 230;
-  --c-alerta: 232 110 100;
+  --papel: 14 15 17;
+  --superficie: 22 24 27;
+  --tinta: 242 241 237;
+  --tinta2: 178 180 184;
+  --apagado: 126 128 132;
+  --fio: 42 45 50;
+  --fio2: 32 34 38;
+  --realce: 242 241 237;
+  --alerta: 214 106 96;
 
-  --sombra: 0 1px 2px rgba(0, 0, 0, .3);
-  --sombra-alta: 0 6px 18px -8px rgba(0, 0, 0, .6);
-  --sombra-flutua: 0 20px 44px -16px rgba(0, 0, 0, .7);
-
-  --tinta: .14;
-  --tinta-forte: .22;
+  --tinta-etapa: .14;
+  --tinta-etapa-forte: .24;
 }
 
 * { box-sizing: border-box; }
-/* a ficha fica fora da tela à direita quando fechada; sem o overflow-x nos
-   DOIS elementos, ela cria uma barra de rolagem horizontal na página */
 html, body { height: 100%; overflow-x: hidden; }
 
 body {
   margin: 0;
-  background: rgb(var(--c-canvas));
-  color: rgb(var(--c-ink));
-  font-family: "Inter", -apple-system, "Segoe UI", system-ui, sans-serif;
-  font-size: 14px;
-  line-height: 1.45;
+  background: rgb(var(--papel));
+  color: rgb(var(--tinta));
+  font-family: Inter, -apple-system, "Segoe UI", system-ui, sans-serif;
+  font-size: 13.5px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv05", "ss01";
 }
 
-h1, h2, h3 { margin: 0; font-weight: 600; }
+/* ------------------------------------------------------------ tipografia */
 
-/* --------------------------------------------------------------- títulos */
+/* Serifa só para os títulos e os números grandes — é o único gesto
+   editorial da interface; o resto é sans, discreto. */
+.serifa {
+  font-family: "Instrument Serif", Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+h1, h2, h3 { margin: 0; font-weight: 500; }
+
 .titulo {
-  font-size: 17px;
-  font-weight: 600;
-  color: rgb(var(--c-ink));
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 26px;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+.titulo-menor {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 19px;
+  font-weight: 400;
 }
 
+/* Micro-rótulo: caixa alta, tracking largo. Marca as seções sem peso. */
 .rotulo {
   display: block;
-  font-size: 11px;
-  color: rgb(var(--c-muted));
-  font-weight: 600;
-  margin-bottom: 4px;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  color: rgb(var(--apagado));
+  font-weight: 500;
+  margin-bottom: 6px;
 }
 
-.secao-titulo {
-  font-size: 11px;
+.secao {
+  font-size: 9.5px;
   text-transform: uppercase;
-  letter-spacing: .1em;
-  color: rgb(var(--c-muted));
-  font-weight: 700;
-  margin-bottom: 10px;
+  letter-spacing: .18em;
+  color: rgb(var(--apagado));
+  font-weight: 500;
+  padding-bottom: 9px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgb(var(--fio));
 }
+
+.numero {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.mono { font-variant-numeric: tabular-nums; }
+.apagado { color: rgb(var(--apagado)); }
+.tinta2 { color: rgb(var(--tinta2)); }
+.oculto { display: none !important; }
 
 /* ------------------------------------------------------------ superfícies */
-.card {
-  background: rgb(var(--c-paper));
-  border: 1px solid rgb(var(--c-line));
-  border-radius: 6px;
-  box-shadow: var(--sombra);
+.bloco {
+  background: rgb(var(--superficie));
+  border: 1px solid rgb(var(--fio));
+  border-radius: var(--raio);
 }
 
-/* ---------------------------------------------------------------- pills */
-.pill {
+/* ---------------------------------------------------------------- etiquetas */
+.etiqueta {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
+  gap: 5px;
+  font-size: 10.5px;
+  letter-spacing: .04em;
+  color: rgb(var(--tinta2));
   white-space: nowrap;
 }
-.pill-neutro {
-  background: rgb(var(--c-muted) / .13);
-  color: rgb(var(--c-ink2));
+/* o ponto colorido é o que identifica a etapa — dispensa fundo colorido */
+.ponto {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgb(var(--cor, 154 167 188));
+  flex-shrink: 0;
 }
 
 /* ------------------------------------------------------------- controles */
@@ -116,62 +143,75 @@ input, select, textarea, button { font-family: inherit; font-size: 13px; color: 
 
 .campo {
   width: 100%;
-  padding: 8px 10px;
-  background: rgb(var(--c-paper));
-  border: 1px solid rgb(var(--c-line));
-  border-radius: 5px;
-  color: rgb(var(--c-ink));
+  padding: 7px 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgb(var(--fio));
+  border-radius: 0;
+  color: rgb(var(--tinta));
   outline: none;
-  transition: border-color .12s, box-shadow .12s;
+  transition: border-color .15s;
 }
-.campo:focus {
-  border-color: rgb(var(--c-acao));
-  box-shadow: 0 0 0 3px rgb(var(--c-acao) / .13);
-}
-.campo::placeholder { color: rgb(var(--c-muted)); }
-select.campo { cursor: pointer; }
-textarea.campo { resize: vertical; min-height: 64px; }
+.campo:focus { border-bottom-color: rgb(var(--tinta)); }
+.campo::placeholder { color: rgb(var(--apagado)); }
+select.campo { cursor: pointer; padding-right: 14px; }
+textarea.campo { resize: vertical; min-height: 56px; border: 1px solid rgb(var(--fio)); padding: 8px 10px; }
 
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 8px 14px;
-  border: 1px solid rgb(var(--c-line));
-  border-radius: 5px;
-  background: rgb(var(--c-paper));
-  color: rgb(var(--c-ink));
+  padding: 7px 14px;
+  border: 1px solid rgb(var(--fio));
+  border-radius: var(--raio);
+  background: transparent;
+  color: rgb(var(--tinta));
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
+  letter-spacing: .02em;
+  transition: border-color .15s, background .15s, opacity .15s;
+}
+.btn:hover { border-color: rgb(var(--tinta2)); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+.btn-cheio {
+  background: rgb(var(--realce));
+  border-color: rgb(var(--realce));
+  color: rgb(var(--papel));
+}
+.btn-cheio:hover { opacity: .85; border-color: rgb(var(--realce)); }
+
+.btn-limpo { border-color: transparent; color: rgb(var(--tinta2)); padding: 6px 8px; }
+.btn-limpo:hover { color: rgb(var(--tinta)); border-color: transparent; text-decoration: underline; }
+
+.btn-mini { padding: 4px 9px; font-size: 11px; }
+
+/* ------------------------------------------------------------------ tabela */
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  color: rgb(var(--apagado));
   font-weight: 500;
-  transition: background .12s, border-color .12s;
+  padding: 0 12px 9px 0;
+  border-bottom: 1px solid rgb(var(--fio));
+  white-space: nowrap;
 }
-.btn:hover { background: rgb(var(--c-muted) / .09); }
-.btn:disabled { opacity: .45; cursor: not-allowed; }
-
-.btn-principal {
-  background: rgb(var(--c-acao));
-  border-color: rgb(var(--c-acao));
-  color: #fff;
-  font-weight: 600;
+td {
+  padding: 11px 12px 11px 0;
+  border-bottom: 1px solid rgb(var(--fio2));
+  vertical-align: middle;
 }
-.btn-principal:hover { filter: brightness(1.08); background: rgb(var(--c-acao)); }
+th.num, td.num { text-align: right; padding-right: 0; font-variant-numeric: tabular-nums; }
+tbody tr:hover td { background: rgb(var(--fio2) / .5); }
 
-.btn-limpo { background: transparent; border-color: transparent; color: rgb(var(--c-ink2)); }
-.btn-limpo:hover { background: rgb(var(--c-muted) / .11); }
-
-.btn-mini { padding: 4px 9px; font-size: 12px; }
-
-/* ------------------------------------------------------------ utilitários */
-.muted { color: rgb(var(--c-muted)); }
-.mono { font-variant-numeric: tabular-nums; }
-.oculto { display: none !important; }
-
-::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgb(var(--c-muted) / .35);
+  background: rgb(var(--apagado) / .3);
   border: 3px solid transparent;
   border-radius: 8px;
   background-clip: content-box;

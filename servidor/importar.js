@@ -21,10 +21,10 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { abrirBanco, registrarHistorico, supervisorPorNome } from "./banco.js";
+import { abrirBanco, registrarHistorico, supervisorPorNome, usuarioPorNome } from "./banco.js";
 import {
-  chaveNatural, etapa, etapaDaSituacao, formatarDocumento, lerData, lerValor,
-  normalizar, separarCorretor, somenteDigitos, texto, validarDocumento,
+  chaveNatural, etapa, etapaDaSituacao, formatarDocumento, hoje, lerData,
+  lerValor, normalizar, separarCorretor, somenteDigitos, texto, validarDocumento,
 } from "./dominio.js";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
@@ -63,6 +63,17 @@ export function linhaParaProposta(linha, contexto) {
     pendencia_detalhe: "",
     situacao_origem: situacao,
     responsavel: texto(linha.responsavel).toUpperCase(),
+    implantada_em: status === "implantada" ? lerData(linha.emissao) : null,
+
+    // A proposta entrou na operação na data de emissão, não no dia em que a
+    // planilha foi importada — senão o histórico diário começaria com 2 mil
+    // "propostas novas hoje".
+    criado_em: `${lerData(linha.emissao) || dataDoMes(contexto.mes, contexto.ano) || contexto.hojeData} 00:00:00`,
+
+    // A importação é o marco zero do acompanhamento: a partir de hoje é que
+    // passa a contar quem verificou e quem deixou de verificar. Sem isso, os
+    // 865 processos abertos nasceriam todos como "crítica" no primeiro dia.
+    ultima_verificacao: contexto.importadoEm,
     origem_arquivo: contexto.arquivo,
     origem_aba: contexto.aba,
   };
@@ -100,11 +111,11 @@ function validarLinha(proposta, situacaoReconhecida) {
 }
 
 const CAMPOS = [
-  "supervisor_id", "responsavel", "razao_social", "documento", "documento_exibido",
+  "supervisor_id", "usuario_id", "responsavel", "razao_social", "documento", "documento_exibido",
   "numero_proposta", "operadora", "corretor", "valor", "data_proposta",
   "data_validade", "cadastrado", "observacoes", "status_atual", "pendencia_tipo",
-  "pendencia_detalhe", "situacao_origem", "origem_arquivo", "origem_aba",
-  "chave_natural", "busca",
+  "pendencia_detalhe", "implantada_em", "situacao_origem", "origem_arquivo",
+  "origem_aba", "chave_natural", "busca", "criado_em", "ultima_verificacao",
 ];
 
 export function inserirProposta(db, proposta) {
@@ -157,6 +168,7 @@ export function importar({ simular = false, recomecar = false, ano = 2026, camin
     avisos: {},          // motivo -> quantidade
     porSupervisor: {},   // supervisor -> quantidade
     porEtapa: {},        // etapa -> quantidade
+    semResponsavel: 0,
     abasCompartilhadas: [],
     exemplosDuplicados: [],
   };
@@ -168,6 +180,7 @@ export function importar({ simular = false, recomecar = false, ano = 2026, camin
   );
 
   const abas = abasNaOrdemDeImportacao(bruto.arquivos);
+  const importadoEm = new Date().toISOString().slice(0, 19).replace("T", " ");
 
   if (!simular) db.exec("BEGIN");
   try {
@@ -177,7 +190,10 @@ export function importar({ simular = false, recomecar = false, ano = 2026, camin
 
       for (const linha of aba.registros) {
         relatorio.lidas += 1;
-        const contexto = { arquivo: aba.arquivo, aba: aba.aba, mes: aba.mes, ano };
+        const contexto = {
+          arquivo: aba.arquivo, aba: aba.aba, mes: aba.mes, ano,
+          hojeData: hoje(), importadoEm,
+        };
         const { proposta, situacaoReconhecida } = linhaParaProposta(linha, contexto);
 
         const avisos = validarLinha(proposta, situacaoReconhecida);
@@ -205,6 +221,9 @@ export function importar({ simular = false, recomecar = false, ano = 2026, camin
 
         if (!simular) {
           proposta.supervisor_id = supervisor.id;
+          // A coluna RESPONSÁVEL da planilha é justamente a ADM que acompanha:
+          // cada nome vira um usuário, e a proposta já nasce vinculada a ela.
+          proposta.usuario_id = usuarioPorNome(db, proposta.responsavel)?.id ?? null;
           const id = inserirProposta(db, proposta);
           registrarHistorico(db, id, {
             tipo: "importacao",
@@ -213,11 +232,24 @@ export function importar({ simular = false, recomecar = false, ano = 2026, camin
               + (proposta.situacao_origem ? ` · situação de origem: ${proposta.situacao_origem}` : ""),
             autor: "importação",
           });
+
+          // Marco zero do acompanhamento. Sem esta linha, o primeiro dia do
+          // histórico apareceria com a carteira inteira "não acompanhada" —
+          // uma acusação falsa contra a equipe por um dia em que o sistema
+          // sequer existia. A observação deixa claro que veio da importação.
+          if (etapa(proposta.status_atual)?.prazo) {
+            db.prepare(`
+              INSERT INTO verificacoes (proposta_id, usuario_id, dia, quando, etapa, observacao)
+              VALUES (?, ?, ?, ?, ?, ?)
+            `).run(id, proposta.usuario_id ?? null, importadoEm.slice(0, 10), importadoEm,
+                   proposta.status_atual, "marco inicial — importação da planilha");
+          }
         }
 
         relatorio.importadas += 1;
         relatorio.porSupervisor[aba.supervisor] = (relatorio.porSupervisor[aba.supervisor] || 0) + 1;
         relatorio.porEtapa[proposta.status_atual] = (relatorio.porEtapa[proposta.status_atual] || 0) + 1;
+        if (!proposta.responsavel) relatorio.semResponsavel += 1;
       }
 
       if (aba.compartilhada) {
@@ -246,6 +278,7 @@ function imprimirRelatorio(r, simulacao) {
   linha(`  propostas importadas .. ${r.importadas}`);
   linha(`  duplicadas ignoradas .. ${r.duplicadas}`);
   linha(`  linhas com aviso ...... ${r.comAviso}`);
+  linha(`  sem ADM responsável ... ${r.semResponsavel}`);
 
   linha();
   linha("  Por supervisor");

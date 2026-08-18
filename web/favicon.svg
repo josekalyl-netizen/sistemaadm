@@ -1,6 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect x="0" y="0" width="64" height="64" rx="13" fill="#0F2A52"/>
-  <text x="32" y="41" text-anchor="middle"
-        font-family="Inter, Helvetica, Arial, sans-serif" font-size="21" font-weight="700"
-        fill="#FFFFFF" letter-spacing="0.5">W3G</text>
+  <rect width="64" height="64" rx="4" fill="#14161A"/>
+  <text x="32" y="42" text-anchor="middle" font-family="Georgia, serif"
+        font-size="26" fill="#FAFAF8" letter-spacing="1">W3G</text>
 </svg>
