@@ -18,6 +18,7 @@ import { criarProposta, criarCorretor, criarUsuario, mudarStatus } from "./api.j
 import { verificar, fecharDiasPassados } from "./acompanhamento.js";
 import { zerar, desligarImportacaoAutomatica } from "./zerar.js";
 import { hoje } from "./dominio.js";
+import { pathToFileURL } from "node:url";
 
 /* Sorteio com semente fixa: a mesma demonstração sai igual toda vez que roda.
    Numa apresentação isso importa — dá para ensaiar a fala em cima dos números
@@ -199,7 +200,10 @@ export function preencher(db) {
   return feito;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+/* Windows: process.argv[1] chega como C:\\Users\\... e `file://` + isso nao bate
+   com import.meta.url, que e file:///C:/Users/... . Sem pathToFileURL o script
+   roda, nao entra aqui, e termina em silencio sem fazer nada. */
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const agora = process.argv.includes("--agora");
   const db = abrirBanco();
   const jaTem = db.prepare("SELECT COUNT(*) n FROM propostas").get().n;

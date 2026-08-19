@@ -15,6 +15,7 @@
  */
 
 import { abrirBanco, fecharBanco, semearSupervisores } from "./banco.js";
+import { pathToFileURL } from "node:url";
 
 /* A ordem importa: filhos antes dos pais, senão a chave estrangeira barra. */
 const TABELAS = [
@@ -117,4 +118,7 @@ function principal() {
   fecharBanco();
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) principal();
+/* Windows: process.argv[1] chega como C:\\Users\\... e `file://` + isso nao bate
+   com import.meta.url, que e file:///C:/Users/... . Sem pathToFileURL o script
+   roda, nao entra aqui, e termina em silencio sem fazer nada. */
+if (import.meta.url === pathToFileURL(process.argv[1]).href) principal();
