@@ -13,6 +13,7 @@
     "importar:simular": "node --no-warnings servidor/importar.js --simular",
     "importar:recomecar": "node --no-warnings servidor/importar.js --recomecar",
     "planilhas": "python3 scripts/planilha_para_json.py",
-    "zerar": "node --no-warnings servidor/zerar.js"
+    "zerar": "node --no-warnings servidor/zerar.js",
+    "demo": "node --no-warnings servidor/demonstracao.js"
   }
 }

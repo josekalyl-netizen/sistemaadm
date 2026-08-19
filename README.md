@@ -32,6 +32,7 @@ npm run importar:simular                # relatório de validação, sem gravar
 npm run importar:recomecar              # apaga tudo e importa do zero
 npm run zerar                           # mostra o que existe, sem apagar
 npm run zerar -- --agora                # deixa o sistema em branco
+npm run demo -- --agora                 # preenche com dados ficticios (apresentacao)
 ```
 
 ### Cadastrar corretor
@@ -373,3 +374,28 @@ Sem framework, sem build, sem dependência: `npm start` e pronto.
 As planilhas (`*.xlsx`), o `dados/planilhas.json`, o banco (`dados/sistema.db`)
 e a senha (`dados/senha-master.txt`) **não são versionados** — estão no
 `.gitignore`. São dados de clientes reais e ficam só na máquina.
+
+## Dados fictícios para apresentar
+
+Para mostrar o sistema funcionando antes de ter dado real:
+
+```bash
+npm run demo -- --agora
+npm start
+```
+
+Preenche 85 propostas espalhadas pelas oito etapas e por sete meses, 22
+corretores divididos nas cinco carteiras, cinco ADMs e o acompanhamento diário
+das últimas duas semanas — é isso que faz o painel, os alertas, os relatórios e
+as carteiras terem conteúdo ao mesmo tempo. Empresas, CNPJs, números de proposta
+e valores são inventados.
+
+O sorteio tem semente fixa: rodar de novo produz exatamente os mesmos números,
+então dá para ensaiar a apresentação em cima do que vai aparecer na tela.
+
+Sem `--agora`, o comando recusa quando já existem propostas — para não apagar
+trabalho de verdade por engano. Antes de começar a usar para valer:
+
+```bash
+npm run zerar -- --agora
+```
